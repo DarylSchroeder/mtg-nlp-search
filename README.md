@@ -47,6 +47,29 @@ Run the simple test suite:
 ./run_tests.sh
 ```
 
+## Deployment
+
+### Render.com (Recommended)
+
+The project is configured for easy deployment on Render.com:
+
+1. **Connect your GitHub repo** to Render.com
+2. **Create a new Web Service** from your repository
+3. **Use the following settings**:
+   - Build Command: `pip install -r requirements.txt`
+   - Start Command: `uvicorn app.main:app --host 0.0.0.0 --port 10000`
+   - No environment variables needed (uses built-in NLP parsing)
+
+The `render.yaml` file contains the complete configuration.
+
+### Manual Deployment
+
+For other platforms, the service runs on any Python environment with:
+```bash
+pip install fastapi uvicorn requests
+uvicorn app.main:app --host 0.0.0.0 --port 8000
+```
+
 ## Key Fix
 
 Fixed critical parsing issue where "mana" was incorrectly triggering ramp detection:
