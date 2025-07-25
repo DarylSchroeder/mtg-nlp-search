@@ -8,8 +8,29 @@ import requests
 import json
 import sys
 import time
+import re
 
 API_URL = "https://mtg-nlp-search.onrender.com/search"
+
+def colors_match(expected_query_type, actual_query):
+    """Check if color sets match regardless of order"""
+    
+    # Extract color pattern from expected (e.g., "coloridentity:WU" -> "WU")
+    expected_match = re.search(r'coloridentity:([WUBRG]+)', expected_query_type)
+    if not expected_match:
+        # Fallback for non-color queries (like "type:artifact")
+        return expected_query_type in actual_query
+    
+    expected_color_set = set(expected_match.group(1))
+    
+    # Extract color pattern from actual query
+    actual_match = re.search(r'coloridentity:([WUBRG]+)', actual_query)
+    if not actual_match:
+        return False
+    
+    actual_color_set = set(actual_match.group(1))
+    
+    return expected_color_set == actual_color_set
 
 def test_query(query, expected_field, expected_query_type, description):
     """Test a query and verify it uses the correct field and query type"""
@@ -34,11 +55,11 @@ def test_query(query, expected_field, expected_query_type, description):
         # For direct scryfall queries, check the query string
         if 'scryfall_query' in filters:
             field_present = True  # Direct queries are always valid
-            query_correct = expected_query_type in filters['scryfall_query']
+            query_correct = colors_match(expected_query_type, filters['scryfall_query'])
         else:
             # For filter-based queries, check the filters
             field_present = expected_field in filters
-            query_correct = expected_query_type in scryfall_query
+            query_correct = colors_match(expected_query_type, scryfall_query)
         
         print(f"🎛️  Filters: {json.dumps(filters, indent=2)}")
         print(f"🔍 Scryfall Query: '{scryfall_query}'")
