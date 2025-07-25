@@ -2,6 +2,8 @@ from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 from app.nlp import extract_filters
 from app.scryfall import search_scryfall
+from app.deck_analyzer import DeckAnalyzer
+from typing import List
 
 app = FastAPI(title="MTG NLP Search", description="Natural language search for Magic: The Gathering cards")
 
@@ -76,4 +78,23 @@ def search(
                 "has_next": False,
                 "has_prev": False
             }
+        }
+
+@app.post("/analyze-deck")
+def analyze_deck(card_names: List[str]):
+    """Analyze a deck list and suggest improvements"""
+    try:
+        analyzer = DeckAnalyzer()
+        results = analyzer.analyze_deck_list(card_names)
+        
+        return {
+            "success": True,
+            "analysis": results
+        }
+    except Exception as e:
+        print(f"Error in deck analysis: {e}")
+        return {
+            "success": False,
+            "error": str(e),
+            "analysis": None
         }

@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MTG Deck Analyzer Demo</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .input-section {
+            margin-bottom: 30px;
+        }
+        label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: bold;
+            color: #555;
+        }
+        textarea {
+            width: 100%;
+            height: 200px;
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 14px;
+            resize: vertical;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 10px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .results {
+            margin-top: 30px;
+        }
+        .improvement {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        .improvement h3 {
+            margin: 0 0 10px 0;
+            color: #856404;
+        }
+        .reason {
+            color: #721c24;
+            margin-bottom: 10px;
+        }
+        .alternatives {
+            color: #155724;
+        }
+        .summary {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        .loading {
+            text-align: center;
+            color: #666;
+            font-style: italic;
+        }
+        .error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🃏 MTG Deck Analyzer</h1>
+        <p style="text-align: center; color: #666; margin-bottom: 30px;">
+            Paste your deck list below to get improvement suggestions based on card power levels and efficiency.
+        </p>
+        
+        <div class="input-section">
+            <label for="deckList">Deck List (one card per line):</label>
+            <textarea id="deckList" placeholder="Murder
+Cancel
+Lightning Strike
+Shock
+Divination
+Counterspell
+Lightning Bolt
+Swords to Plowshares"></textarea>
+            <button onclick="analyzeDeck()" id="analyzeBtn">Analyze Deck</button>
+        </div>
+        
+        <div id="results" class="results" style="display: none;">
+            <div id="summary" class="summary"></div>
+            <div id="improvements"></div>
+        </div>
+        
+        <div id="loading" class="loading" style="display: none;">
+            Analyzing deck... This may take a moment due to API rate limits.
+        </div>
+        
+        <div id="error" class="error" style="display: none;"></div>
+    </div>
+
+    <script>
+        async function analyzeDeck() {
+            const deckListText = document.getElementById('deckList').value.trim();
+            if (!deckListText) {
+                alert('Please enter a deck list');
+                return;
+            }
+            
+            // Parse deck list into card names
+            const cardNames = deckListText.split('\n')
+                .map(line => line.trim())
+                .filter(line => line.length > 0)
+                .map(line => {
+                    // Remove quantity numbers (e.g., "4x Lightning Bolt" -> "Lightning Bolt")
+                    return line.replace(/^\d+x?\s*/, '').trim();
+                });
+            
+            if (cardNames.length === 0) {
+                alert('No valid card names found');
+                return;
+            }
+            
+            // Show loading state
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('results').style.display = 'none';
+            document.getElementById('error').style.display = 'none';
+            document.getElementById('analyzeBtn').disabled = true;
+            
+            try {
+                // For demo purposes, we'll simulate the API call
+                // In production, this would call your backend API
+                const mockAnalysis = await simulateAnalysis(cardNames);
+                displayResults(mockAnalysis);
+                
+            } catch (error) {
+                console.error('Analysis error:', error);
+                document.getElementById('error').textContent = 'Error analyzing deck: ' + error.message;
+                document.getElementById('error').style.display = 'block';
+            } finally {
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('analyzeBtn').disabled = false;
+            }
+        }
+        
+        async function simulateAnalysis(cardNames) {
+            // Simulate API delay
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            
+            // Mock analysis results based on known underpowered cards
+            const underpoweredCards = {
+                'Murder': {
+                    reason: '3 mana for single target removal is inefficient',
+                    alternatives: ['Swords to Plowshares', 'Path to Exile', 'Generous Gift']
+                },
+                'Cancel': {
+                    reason: '3 mana counterspell with no upside',
+                    alternatives: ['Counterspell', 'Negate', 'Swan Song']
+                },
+                'Lightning Strike': {
+                    reason: '3 mana for 3 damage is below rate',
+                    alternatives: ['Lightning Bolt', 'Shock', 'Galvanic Blast']
+                },
+                'Shock': {
+                    reason: 'Only 2 damage for 1 mana',
+                    alternatives: ['Lightning Bolt', 'Galvanic Blast', 'Burst Lightning']
+                },
+                'Divination': {
+                    reason: '3 mana for 2 cards is below rate',
+                    alternatives: ['Rhystic Study', 'Mystic Remora', 'Phyrexian Arena']
+                }
+            };
+            
+            const improvements = [];
+            let needsImprovement = 0;
+            
+            cardNames.forEach(cardName => {
+                if (underpoweredCards[cardName]) {
+                    improvements.push({
+                        card: cardName,
+                        reason: underpoweredCards[cardName].reason,
+                        alternatives: underpoweredCards[cardName].alternatives
+                    });
+                    needsImprovement++;
+                }
+            });
+            
+            return {
+                total_analyzed: cardNames.length,
+                improvements: improvements,
+                summary: {
+                    needs_improvement: needsImprovement,
+                    high_power: Math.max(0, cardNames.length - needsImprovement - 2),
+                    medium_power: Math.min(2, cardNames.length - needsImprovement),
+                    low_power: needsImprovement
+                }
+            };
+        }
+        
+        function displayResults(analysis) {
+            const resultsDiv = document.getElementById('results');
+            const summaryDiv = document.getElementById('summary');
+            const improvementsDiv = document.getElementById('improvements');
+            
+            // Display summary
+            summaryDiv.innerHTML = `
+                <h2>📊 Analysis Summary</h2>
+                <p><strong>Cards analyzed:</strong> ${analysis.total_analyzed}</p>
+                <p><strong>Cards needing improvement:</strong> ${analysis.summary.needs_improvement}</p>
+                <p><strong>Power level distribution:</strong></p>
+                <ul>
+                    <li>High power: ${analysis.summary.high_power}</li>
+                    <li>Medium power: ${analysis.summary.medium_power}</li>
+                    <li>Low power: ${analysis.summary.low_power}</li>
+                </ul>
+            `;
+            
+            // Display improvements
+            if (analysis.improvements.length > 0) {
+                improvementsDiv.innerHTML = '<h2>🔄 Suggested Improvements</h2>' +
+                    analysis.improvements.map(improvement => `
+                        <div class="improvement">
+                            <h3>${improvement.card}</h3>
+                            <div class="reason">❌ ${improvement.reason}</div>
+                            <div class="alternatives">✅ Consider: ${improvement.alternatives.join(', ')}</div>
+                        </div>
+                    `).join('');
+            } else {
+                improvementsDiv.innerHTML = '<h2>✅ No Improvements Needed</h2><p>Your deck looks solid!</p>';
+            }
+            
+            resultsDiv.style.display = 'block';
+        }
+    </script>
+</body>
+</html>

@@ -1,12 +1,18 @@
-INFO:     Will watch for changes in these directories: ['/root/code/mtg-nlp-search/mtg-nlp-search']
-INFO:     Uvicorn running on http://0.0.0.0:8001 (Press CTRL+C to quit)
-INFO:     Started reloader process [14364] using StatReload
-INFO:     Started server process [14366]
+INFO:     Started server process [19595]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
-INFO:     127.0.0.1:47124 - "GET /docs HTTP/1.1" 200 OK
+INFO:     Uvicorn running on http://0.0.0.0:8001 (Press CTRL+C to quit)
+Extracted filters: {'cmc': 1, 'coloridentity': 'WUBG', 'effects': ['removal']}
+Scryfall query: cmc:1 coloridentity:WUBG (o:"destroy target" OR o:"exile target")
+Found 175 cards
+Found 175 total cards, showing page 1/9
+INFO:     127.0.0.1:47520 - "GET /search?prompt=removal+for+Atraxa+1+cmc HTTP/1.1" 200 OK
+Extracted filters: {'cmc': 2, 'coloridentity': 'WUBG', 'effects': ['removal']}
+Scryfall query: cmc:2 coloridentity:WUBG (o:"destroy target" OR o:"exile target")
+Found 175 cards
+Found 175 total cards, showing page 1/9
+INFO:     127.0.0.1:45408 - "GET /search?prompt=removal+for+Atraxa+2+cmc HTTP/1.1" 200 OK
 INFO:     Shutting down
 INFO:     Waiting for application shutdown.
 INFO:     Application shutdown complete.
-INFO:     Finished server process [14366]
-INFO:     Stopping reloader process [14364]
+INFO:     Finished server process [19595]
