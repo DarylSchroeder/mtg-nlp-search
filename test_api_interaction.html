@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MTG API Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .result { background: #f5f5f5; padding: 10px; margin: 10px 0; border-radius: 3px; }
+        .error { background: #ffe6e6; color: #d00; }
+        .success { background: #e6ffe6; color: #060; }
+        button { padding: 10px 15px; margin: 5px; cursor: pointer; }
+        input { padding: 8px; margin: 5px; width: 300px; }
+        pre { white-space: pre-wrap; word-wrap: break-word; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>MTG NLP Search API Test</h1>
+        
+        <div class="test-section">
+            <h2>Test Query</h2>
+            <input type="text" id="testQuery" value="1 cmc white artifact" placeholder="Enter search query">
+            <button onclick="testAPI()">Test API</button>
+            <button onclick="testFrontend()">Test Frontend Logic</button>
+        </div>
+
+        <div class="test-section">
+            <h2>API Response</h2>
+            <div id="apiResult" class="result">Click "Test API" to see raw API response</div>
+        </div>
+
+        <div class="test-section">
+            <h2>Frontend Processing</h2>
+            <div id="frontendResult" class="result">Click "Test Frontend Logic" to see how frontend processes the data</div>
+        </div>
+
+        <div class="test-section">
+            <h2>Bug Report Data</h2>
+            <div id="bugReportResult" class="result">This shows what would go in the bug report</div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'https://mtg-nlp-search.onrender.com/search';
+
+        async function testAPI() {
+            const query = document.getElementById('testQuery').value;
+            const resultDiv = document.getElementById('apiResult');
+            
+            try {
+                resultDiv.innerHTML = '<em>Loading...</em>';
+                
+                const params = new URLSearchParams({
+                    prompt: query,
+                    page: 1,
+                    per_page: 5
+                });
+                
+                const response = await fetch(`${API_URL}?${params}`);
+                const data = await response.json();
+                
+                resultDiv.innerHTML = `
+                    <div class="success">✅ API Response Received</div>
+                    <h3>Raw Response:</h3>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+                
+                // Store for other tests
+                window.lastAPIResponse = data;
+                
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error">❌ API Error: ${error.message}</div>
+                `;
+            }
+        }
+
+        function testFrontend() {
+            const resultDiv = document.getElementById('frontendResult');
+            
+            if (!window.lastAPIResponse) {
+                resultDiv.innerHTML = '<div class="error">❌ Run API test first</div>';
+                return;
+            }
+            
+            const data = window.lastAPIResponse;
+            
+            // Simulate frontend processing
+            const frontendData = {
+                // What frontend expects vs what API returns
+                expectedParsedFilters: data.parsed_filters || null,
+                actualFilters: data.filters || null,
+                expectedScryfallQuery: data.scryfall_query || null,
+                
+                // Results processing
+                resultsCount: data.results ? data.results.length : 0,
+                firstCardName: data.results && data.results[0] ? data.results[0].name : 'No cards',
+                
+                // What frontend would store for bug reports
+                lastScryfallCall: {
+                    timestamp: new Date().toISOString(),
+                    searchQuery: document.getElementById('testQuery').value,
+                    apiUrl: `${API_URL}?prompt=${encodeURIComponent(document.getElementById('testQuery').value)}&page=1&per_page=5`,
+                    responseData: data,
+                    scryfallQuery: data.scryfall_query || null,
+                    parsedFilters: data.filters || null  // This is the fix!
+                }
+            };
+            
+            resultDiv.innerHTML = `
+                <div class="success">✅ Frontend Processing Complete</div>
+                <h3>Field Mapping:</h3>
+                <pre>${JSON.stringify(frontendData, null, 2)}</pre>
+            `;
+            
+            // Store for bug report test
+            window.frontendProcessed = frontendData;
+        }
+
+        function generateBugReport() {
+            if (!window.frontendProcessed) {
+                return '<div class="error">❌ Run frontend test first</div>';
+            }
+            
+            const data = window.frontendProcessed.lastScryfallCall;
+            const query = document.getElementById('testQuery').value;
+            
+            return `
+                <div class="success">✅ Bug Report Generated</div>
+                <h3>Bug Report Content:</h3>
+                <pre>## Search Issue Report
+
+**Search Query:** "${query}"
+**Page:** 1
+**Timestamp:** ${data.timestamp}
+
+### 🔗 Reproduction URL
+**Click to reproduce:** ${window.location.origin}/?q=${encodeURIComponent(query)}
+
+### Scryfall API Call Debug Info
+**Timestamp:** ${data.timestamp}
+**Backend API URL:** \`${data.apiUrl}\`
+**Parsed Filters:** 
+\`\`\`json
+${JSON.stringify(data.parsedFilters, null, 2)}
+\`\`\`
+**Scryfall Query:** \`${data.scryfallQuery || 'N/A'}\`
+
+### Results Summary
+- **Cards Found:** ${data.responseData.results ? data.responseData.results.length : 0}
+- **First Card:** ${data.responseData.results && data.responseData.results[0] ? data.responseData.results[0].name : 'None'}
+</pre>
+            `;
+        }
+
+        // Auto-update bug report when frontend test runs
+        setInterval(() => {
+            const bugReportDiv = document.getElementById('bugReportResult');
+            bugReportDiv.innerHTML = generateBugReport();
+        }, 1000);
+
+        // Test on page load
+        window.addEventListener('load', () => {
+            document.getElementById('bugReportResult').innerHTML = '<em>Run tests above to generate bug report preview</em>';
+        });
+    </script>
+</body>
+</html>

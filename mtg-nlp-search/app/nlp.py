@@ -118,8 +118,13 @@ def extract_filters_fallback(prompt: str) -> dict:
     # Extract color identity
     color_result = extract_color_identity(prompt_lower)
     if color_result[0]:  # If color_identity is not None
-        color_identity, exact_match = color_result
-        if exact_match:
+        color_identity, exact_match = color_result[0], color_result[1]
+        use_color_not_identity = len(color_result) > 2 and color_result[2]
+        
+        if use_color_not_identity:
+            # Use actual card color instead of color identity
+            filters['colors'] = color_identity
+        elif exact_match:
             filters['coloridentity_exact'] = color_identity
         else:
             filters['coloridentity'] = color_identity
@@ -169,7 +174,10 @@ def extract_filters_fallback(prompt: str) -> dict:
 
 def extract_color_identity(prompt_lower: str) -> tuple:
     """Extract color identity from guild names, shard names, commanders, etc.
-    Returns (color_identity, exact_match) where exact_match is True for ':only' suffix"""
+    Returns (color_identity, exact_match, use_color_not_identity) where:
+    - exact_match is True for ':only' suffix
+    - use_color_not_identity is True when we should use 'color:' instead of 'coloridentity:'
+    """
     
     exact_match = False
     color_identity = None
@@ -210,9 +218,16 @@ def extract_color_identity(prompt_lower: str) -> tuple:
             found_colors.append(color_code)
     
     if found_colors:
-        color_identity = ''.join(sorted(found_colors))
+        # For artifacts and most card types, use actual color, not color identity
+        # Color identity is mainly for Commander deck building
+        if any(card_type in prompt_lower for card_type in ['artifact', 'creature', 'instant', 'sorcery', 'enchantment', 'planeswalker']):
+            color_identity = ''.join(sorted(found_colors))
+            # Use 'colors' field instead of 'coloridentity' for actual card colors
+            return color_identity, False, True  # Return (colors, exact_match, use_color_not_identity)
+        else:
+            color_identity = ''.join(sorted(found_colors))
     
-    return color_identity, exact_match
+    return color_identity, exact_match, False
 
 def extract_filters(prompt: str) -> dict:
     """Main filter extraction function with OpenAI + fallback"""

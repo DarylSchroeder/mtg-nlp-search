@@ -30,6 +30,10 @@ def build_query(filters: dict) -> str:
         else:
             parts.append(f"type:{type_value}")
     
+    # Card colors (actual colors, not color identity)
+    if "colors" in filters:
+        parts.append(f"color:{filters['colors']}")
+    
     # Color identity (regular - allows subset matching)
     if "coloridentity" in filters:
         parts.append(f"coloridentity:{filters['coloridentity']}")
