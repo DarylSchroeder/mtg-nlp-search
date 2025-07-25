@@ -64,13 +64,16 @@ def test_mana_cost_extraction():
 def test_color_vs_identity_logic():
     """Test color vs color identity distinction"""
     
-    # Specific colors should use 'colors' field
+    # Colors and guild names should use 'colors' field
     color_cases = [
         ("1 cmc white artifact", {"cmc": 1, "type": "artifact", "colors": "W"}),
         ("blue creature 3 mana", {"cmc": 3, "type": "creature", "colors": "U"}),
         ("red instant 2 cmc", {"cmc": 2, "type": "instant", "colors": "R"}),
         ("green sorcery", {"type": "sorcery", "colors": "G"}),
-        ("black enchantment", {"type": "enchantment", "colors": "B"})
+        ("black enchantment", {"type": "enchantment", "colors": "B"}),
+        ("rakdos removal", {"colors": "BR"}),
+        ("selesnya enchantment", {"type": "enchantment", "colors": "GW"}),
+        ("azorius counterspell", {"colors": "WU"})
     ]
     
     for query, expected_filters in color_cases:
@@ -81,19 +84,24 @@ def test_color_vs_identity_logic():
             assert actual_value == expected_value, f"'{query}' - {key}: expected {expected_value}, got {actual_value}"
         
         # Should use 'colors', not 'coloridentity'
+        assert 'colors' in result, f"'{query}' should have 'colors' field"
+        assert 'coloridentity' not in result, f"'{query}' should not have 'coloridentity' field"
+        
         scryfall_query = result.get("scryfall_query", "")
-        assert "coloridentity:" not in scryfall_query, f"'{query}' should use colors, not coloridentity"
+        if scryfall_query:
+            assert "coloridentity:" not in scryfall_query, f"'{query}' should use color:, not coloridentity:"
+            
         print(f"✅ PASS: '{query}' uses colors correctly")
     
-    # Guild names and commander contexts should use 'coloridentity'
-    identity_cases = [
-        "simic ramp",
-        "white fetchland", 
-        "blue shockland",
-        "white commander"
+    # Commander contexts should use 'coloridentity'
+    commander_cases = [
+        "counterspell for my Chulane deck",
+        "white fetchland for Chulane", 
+        "blue shockland for my Chulane deck",
+        "Chulane commander"
     ]
     
-    for query in identity_cases:
+    for query in commander_cases:
         result = extract_filters(query)
         
         # Check if coloridentity is used either as a field or in scryfall_query

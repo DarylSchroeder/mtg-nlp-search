@@ -64,7 +64,8 @@ def main():
     integration_tests = [
         ("python integration/test_api.py", "Local API Integration"),
         ("python integration/test_deployed_api.py", "Deployed API Health"),
-        ("python integration/test_sample_queries.py", "Sample Query Validation")
+        ("python integration/test_api_samples.py", "API /samples Endpoint"),
+        ("python integration/test_sample_queries.py", "Frontend Sample Queries")
     ]
     
     for cmd, desc in integration_tests:

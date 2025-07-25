@@ -111,11 +111,9 @@ def extract_filters_fallback(prompt: str) -> dict:
             if vernacular == 'commander':
                 color_result = extract_color_identity(prompt_lower)
                 if color_result[0]:  # If color_identity is not None
-                    color_identity, exact_match = color_result[0], color_result[1]
-                    if exact_match:
-                        return {'scryfall_query': f'{scryfall_query} coloridentity={color_identity}'}
-                    else:
-                        return {'scryfall_query': f'{scryfall_query} coloridentity:{color_identity}'}
+                    color_identity, is_commander_context = color_result[0], color_result[1]
+                    # Commander queries always use coloridentity
+                    return {'scryfall_query': f'{scryfall_query} coloridentity:{color_identity}'}
             return {'scryfall_query': scryfall_query}
     
     # Handle land vernacular
@@ -124,26 +122,26 @@ def extract_filters_fallback(prompt: str) -> dict:
             # Check for color combinations with land types
             color_result = extract_color_identity(prompt_lower)
             if color_result[0]:  # If color_identity is not None
-                color_identity, exact_match = color_result[0], color_result[1]
-                if exact_match:
-                    return {'scryfall_query': f'{scryfall_query} coloridentity={color_identity}'}
-                else:
+                color_identity, is_commander_context = color_result[0], color_result[1]
+                if is_commander_context:
+                    # Commander context uses coloridentity
                     return {'scryfall_query': f'{scryfall_query} coloridentity:{color_identity}'}
+                else:
+                    # Land types with guild names use color
+                    return {'scryfall_query': f'{scryfall_query} color:{color_identity}'}
             return {'scryfall_query': scryfall_query}
     
     # Extract color identity
     color_result = extract_color_identity(prompt_lower)
     if color_result[0]:  # If color_identity is not None
-        color_identity, exact_match = color_result[0], color_result[1]
-        use_color_not_identity = len(color_result) > 2 and color_result[2]
+        color_identity, is_commander_context = color_result[0], color_result[1]
         
-        if use_color_not_identity:
-            # Use actual card color instead of color identity
-            filters['colors'] = color_identity
-        elif exact_match:
-            filters['coloridentity_exact'] = color_identity
-        else:
+        if is_commander_context:
+            # Commander context uses coloridentity
             filters['coloridentity'] = color_identity
+        else:
+            # Everything else uses color
+            filters['colors'] = color_identity
     
     # Extract common effects
     effects = []
@@ -189,103 +187,87 @@ def extract_filters_fallback(prompt: str) -> dict:
     return filters
 
 def extract_color_identity(prompt_lower: str) -> tuple:
-    """Extract color identity from guild names, shard names, commanders, etc.
-    Returns (color_identity, exact_match, use_color_not_identity) where:
-    - exact_match is True for ':only' suffix
-    - use_color_not_identity is True when we should use 'color:' instead of 'coloridentity:'
+    """Extract color information from guild names, shard names, commanders, etc.
+    Returns (color_identity, is_commander_context) where:
+    - color_identity is the color string (e.g., 'BR', 'GWU')
+    - is_commander_context is True when we should use 'coloridentity:' instead of 'color:'
     """
     
-    exact_match = False
     color_identity = None
-    use_color_not_identity = False
+    is_commander_context = False
     
-    # Check if this is a card type query (should use actual colors, not color identity)
-    has_card_type = any(card_type in prompt_lower for card_type in ['artifact', 'creature', 'instant', 'sorcery', 'enchantment', 'planeswalker'])
-    
-    # Check guild names with :only suffix
+    # Check guild names - always use color
     for guild, colors in GUILD_COLORS.items():
-        if f"{guild}:only" in prompt_lower:
-            return colors, True, use_color_not_identity
-        elif guild in prompt_lower:
+        if guild in prompt_lower:
             color_identity = colors
-            if has_card_type:
-                use_color_not_identity = True
+            break
     
-    # Check shard names with :only suffix
-    for shard, colors in SHARD_COLORS.items():
-        if f"{shard}:only" in prompt_lower:
-            return colors, True, use_color_not_identity
-        elif shard in prompt_lower:
-            color_identity = colors
-            if has_card_type:
-                use_color_not_identity = True
-    
-    # Check wedge names with :only suffix
-    for wedge, colors in WEDGE_COLORS.items():
-        if f"{wedge}:only" in prompt_lower:
-            return colors, True, use_color_not_identity
-        elif wedge in prompt_lower:
-            color_identity = colors
-            if has_card_type:
-                use_color_not_identity = True
-    
-    # Check commander names using dynamic database
-    from app.commanders import commander_db
-    
-    if commander_db.loaded:
-        # Try to extract commander name from common patterns
-        import re
-        commander_patterns = [
-            r'for my (\w+(?:\s+\w+)*) deck',
-            r'in (\w+(?:\s+\w+)*) colors',
-            r'(\w+(?:\s+\w+)*) commander',
-            r'for (\w+(?:\s+\w+)*)',
-        ]
-        
-        for pattern in commander_patterns:
-            matches = re.findall(pattern, prompt_lower)
-            for match in matches:
-                commander_colors = commander_db.get_commander_colors(match.strip())
-                if commander_colors:
-                    # Check for :only suffix
-                    if f"{match}:only" in prompt_lower:
-                        return commander_colors, True, False
-                    else:
-                        color_identity = commander_colors
-                        use_color_not_identity = False
-                        break
-        
-        # Also check direct commander name mentions
-        for commander_name in commander_db.commanders.keys():
-            if f"{commander_name}:only" in prompt_lower:
-                return commander_db.commanders[commander_name], True, False
-            elif commander_name in prompt_lower:
-                color_identity = commander_db.commanders[commander_name]
-                use_color_not_identity = False
-    else:
-        # Fallback to hardcoded commanders if database not loaded
-        for commander, colors in COMMANDERS.items():
-            if f"{commander}:only" in prompt_lower:
-                return colors, True, use_color_not_identity
-            elif commander in prompt_lower:
+    # Check shard names - always use color
+    if not color_identity:
+        for shard, colors in SHARD_COLORS.items():
+            if shard in prompt_lower:
                 color_identity = colors
-                # Commander queries should use coloridentity, not color
-                use_color_not_identity = False
+                break
     
-    # Check individual colors
-    color_map = {'white': 'W', 'blue': 'U', 'black': 'B', 'red': 'R', 'green': 'G'}
-    found_colors = []
-    for color_name, color_code in color_map.items():
-        if color_name in prompt_lower:
-            found_colors.append(color_code)
+    # Check wedge names - always use color
+    if not color_identity:
+        for wedge, colors in WEDGE_COLORS.items():
+            if wedge in prompt_lower:
+                color_identity = colors
+                break
     
-    if found_colors:
-        color_identity = ''.join(sorted(found_colors))
-        # For card type queries, use actual color, not color identity
-        if has_card_type:
-            use_color_not_identity = True
+    # Check commander names using dynamic database - use coloridentity
+    if not color_identity:
+        from app.commanders import commander_db
+        
+        if commander_db.loaded:
+            # Try to extract commander name from common patterns
+            import re
+            commander_patterns = [
+                r'for my (\w+(?:\s+\w+)*) deck',
+                r'in (\w+(?:\s+\w+)*) colors',
+                r'(\w+(?:\s+\w+)*) commander',
+                r'for (\w+(?:\s+\w+)*)',
+            ]
+            
+            for pattern in commander_patterns:
+                matches = re.findall(pattern, prompt_lower)
+                for match in matches:
+                    commander_colors = commander_db.get_commander_colors(match.strip())
+                    if commander_colors:
+                        color_identity = commander_colors
+                        is_commander_context = True
+                        break
+                if color_identity:
+                    break
+            
+            # Also check direct commander name mentions
+            if not color_identity:
+                for commander_name in commander_db.commanders.keys():
+                    if commander_name in prompt_lower:
+                        color_identity = commander_db.commanders[commander_name]
+                        is_commander_context = True
+                        break
+        else:
+            # Fallback to hardcoded commanders if database not loaded
+            for commander, colors in COMMANDERS.items():
+                if commander in prompt_lower:
+                    color_identity = colors
+                    is_commander_context = True
+                    break
     
-    return color_identity, exact_match, use_color_not_identity
+    # Check individual colors - always use color
+    if not color_identity:
+        color_map = {'white': 'W', 'blue': 'U', 'black': 'B', 'red': 'R', 'green': 'G'}
+        found_colors = []
+        for color_name, color_code in color_map.items():
+            if color_name in prompt_lower:
+                found_colors.append(color_code)
+        
+        if found_colors:
+            color_identity = ''.join(sorted(found_colors))
+    
+    return color_identity, is_commander_context
 
 def extract_filters(prompt: str) -> dict:
     """Main filter extraction function with OpenAI + fallback"""
