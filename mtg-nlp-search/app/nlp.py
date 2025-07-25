@@ -100,6 +100,15 @@ def extract_filters_fallback(prompt: str) -> dict:
     # Handle special card type vernacular
     for vernacular, scryfall_query in CARD_TYPES.items():
         if vernacular in prompt_lower:
+            # For commander queries, check for color combinations
+            if vernacular == 'commander':
+                color_result = extract_color_identity(prompt_lower)
+                if color_result[0]:  # If color_identity is not None
+                    color_identity, exact_match = color_result[0], color_result[1]
+                    if exact_match:
+                        return {'scryfall_query': f'{scryfall_query} coloridentity={color_identity}'}
+                    else:
+                        return {'scryfall_query': f'{scryfall_query} coloridentity:{color_identity}'}
             return {'scryfall_query': scryfall_query}
     
     # Handle land vernacular
@@ -108,7 +117,7 @@ def extract_filters_fallback(prompt: str) -> dict:
             # Check for color combinations with land types
             color_result = extract_color_identity(prompt_lower)
             if color_result[0]:  # If color_identity is not None
-                color_identity, exact_match = color_result
+                color_identity, exact_match = color_result[0], color_result[1]
                 if exact_match:
                     return {'scryfall_query': f'{scryfall_query} coloridentity={color_identity}'}
                 else:

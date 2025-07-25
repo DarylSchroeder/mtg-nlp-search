@@ -113,11 +113,12 @@ def parse_raw_query(raw_query: str) -> str:
         return f"cmc:{mana_cost} type:{card_type}"
     
     # Handle guild/color + function patterns
+    # Colors in WUBRG order (Magic's canonical color order)
     guild_colors = {
         'azorius': 'WU', 'dimir': 'UB', 'rakdos': 'BR', 'gruul': 'RG', 'selesnya': 'GW',
-        'orzhov': 'WB', 'izzet': 'UR', 'golgari': 'BG', 'boros': 'RW', 'simic': 'UG',
+        'orzhov': 'WB', 'izzet': 'UR', 'golgari': 'BG', 'boros': 'RW', 'simic': 'GU',
         'bant': 'GWU', 'esper': 'WUB', 'grixis': 'UBR', 'jund': 'BRG', 'naya': 'RGW',
-        'abzan': 'WBG', 'jeskai': 'URW', 'sultai': 'UBG', 'mardu': 'RWB', 'temur': 'GUR'
+        'abzan': 'WBG', 'jeskai': 'URW', 'sultai': 'BUG', 'mardu': 'RWB', 'temur': 'GUR'
     }
     
     for guild, colors in guild_colors.items():
