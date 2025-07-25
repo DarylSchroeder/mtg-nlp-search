@@ -1,7 +1,18 @@
 #!/bin/bash
 
-# Simple test runner for MTG NLP Search
-# No frameworks, just basic bash and curl
+# Comprehensive test runner for MTG NLP Search
+# Tests both NLP parsing and full API functionality
+
+echo "=== MTG NLP Search Test Suite ==="
+echo ""
+
+# Run NLP parsing tests first
+echo "🧠 Running NLP parsing tests..."
+./test_nlp_parsing.sh
+nlp_exit_code=$?
+
+echo ""
+echo "🌐 Running API integration tests..."
 
 API_URL="http://localhost:8000/search"
 PASSED=0
@@ -12,9 +23,6 @@ GREEN='\033[0;32m'
 RED='\033[0;31m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
-
-echo "=== MTG NLP Search Tests ==="
-echo ""
 
 # Helper function to test a query
 test_query() {
@@ -126,20 +134,27 @@ test_query "shockland" "shockland" "Should find shock lands"
 # Specific inclusion tests
 test_includes_card "1-mana counterspell includes Abjure" "1 mana counterspell" "Abjure"
 test_includes_card "Fetchlands include Polluted Delta" "fetchland" "Polluted Delta"
+test_includes_card "Removal spells include Abrupt Decay" "removal" "Abrupt Decay"
 
 # Specific exclusion tests (our new critical tests)
 test_excludes_card "Chulane counterspells exclude Leyline of Lifeforce" "counterspell that will fit in my Chulane deck" "Leyline of Lifeforce"
+test_excludes_card "Counterspells exclude Abrupt Decay" "counterspell" "Abrupt Decay"
+test_excludes_card "Cannot be countered cards excluded from counterspell search" "1 mana counterspell" "Abrupt Decay"
 
 echo ""
-echo "=== Test Summary ==="
-echo -e "Passed: ${GREEN}$PASSED${NC}"
-echo -e "Failed: ${RED}$FAILED${NC}"
-echo -e "Total: $((PASSED + FAILED))"
-
-if [ $FAILED -eq 0 ]; then
-    echo -e "${GREEN}All tests passed!${NC}"
+echo "=== Overall Test Summary ==="
+if [ $nlp_exit_code -eq 0 ] && [ $FAILED -eq 0 ]; then
+    echo -e "${GREEN}🎉 All tests passed!${NC}"
+    echo "✅ NLP parsing tests: PASSED"
+    echo "✅ API integration tests: PASSED ($PASSED/$((PASSED + FAILED)))"
     exit 0
 else
-    echo -e "${RED}Some tests failed.${NC}"
+    echo -e "${RED}❌ Some tests failed.${NC}"
+    if [ $nlp_exit_code -ne 0 ]; then
+        echo "❌ NLP parsing tests: FAILED"
+    else
+        echo "✅ NLP parsing tests: PASSED"
+    fi
+    echo "📊 API integration tests: $PASSED passed, $FAILED failed"
     exit 1
 fi
