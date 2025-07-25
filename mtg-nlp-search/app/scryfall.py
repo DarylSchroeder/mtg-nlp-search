@@ -23,7 +23,12 @@ def build_query(filters: dict) -> str:
     
     # Card type
     if "type" in filters:
-        parts.append(f"type:{filters['type']}")
+        type_value = filters['type']
+        # If multiple types, wrap in quotes for Scryfall
+        if ' ' in type_value:
+            parts.append(f'type:"{type_value}"')
+        else:
+            parts.append(f"type:{type_value}")
     
     # Color identity (regular - allows subset matching)
     if "coloridentity" in filters:

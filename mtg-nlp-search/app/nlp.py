@@ -80,12 +80,22 @@ def extract_filters_fallback(prompt: str) -> dict:
         filters['power'] = int(pt_match.group(1))
         filters['toughness'] = int(pt_match.group(2))
     
-    # Extract card types
+    # Extract card types - handle multiple types like "artifact creature"
     card_types = ['instant', 'sorcery', 'creature', 'artifact', 'enchantment', 'planeswalker', 'land']
+    found_types = []
     for card_type in card_types:
         if card_type in prompt_lower:
-            filters['type'] = card_type
-            break
+            found_types.append(card_type)
+    
+    # If multiple types found, combine them in the correct order for Scryfall
+    if found_types:
+        if len(found_types) > 1:
+            # Sort types to match Scryfall's expected order (artifact before creature)
+            type_order = {'artifact': 0, 'creature': 1, 'enchantment': 2, 'instant': 3, 'sorcery': 4, 'planeswalker': 5, 'land': 6}
+            found_types.sort(key=lambda x: type_order.get(x, 99))
+            filters['type'] = ' '.join(found_types)
+        else:
+            filters['type'] = found_types[0]
     
     # Handle special card type vernacular
     for vernacular, scryfall_query in CARD_TYPES.items():
