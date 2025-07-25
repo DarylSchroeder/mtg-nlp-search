@@ -64,6 +64,25 @@ def read_root():
         "commander_count": len(commander_db.commanders) if commander_db.loaded else 0
     }
 
+@app.get("/debug-nlp")
+def debug_nlp(prompt: str = Query(..., description="Debug NLP parsing")):
+    """Debug endpoint to test NLP parsing directly"""
+    try:
+        from app.nlp import extract_filters
+        filters = extract_filters(prompt)
+        
+        return {
+            "prompt": prompt,
+            "filters": filters,
+            "debug": "Direct NLP call from API endpoint"
+        }
+    except Exception as e:
+        return {
+            "prompt": prompt,
+            "error": str(e),
+            "debug": "Error in NLP parsing"
+        }
+
 @app.get("/search")
 def search(
     prompt: str = Query(..., description="Describe the kind of card you're looking for."),
@@ -73,18 +92,22 @@ def search(
     try:
         # Try to extract filters using NLP
         filters = extract_filters(prompt)
-        print(f"Extracted filters: {filters}")
+        print(f"API: Extracted filters: {filters}")
         
         # If OpenAI failed, create a basic filter from the prompt
         if not filters or (len(filters) == 1 and "raw_query" in filters):
             filters = {"raw_query": prompt}
-            print(f"Using raw query: {prompt}")
+            print(f"API: Using raw query: {prompt}")
         
         # Search Scryfall with pagination
         search_result = search_scryfall(filters)
         all_cards = search_result["cards"]
         scryfall_query = search_result["query"]
         total_results = len(all_cards)
+        
+        print(f"API: Scryfall query: {scryfall_query}")
+        print(f"API: Total results: {total_results}")
+        print(f"API: Final filters: {filters}")
         
         # Calculate pagination
         start_idx = (page - 1) * per_page
