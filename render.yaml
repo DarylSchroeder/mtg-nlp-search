@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: mtg-nlp-search
+    env: python
+    buildCommand: cd mtg-nlp-search && pip install -r requirements.txt
+    startCommand: cd mtg-nlp-search && uvicorn app.main:app --host 0.0.0.0 --port 10000
+    plan: free
+    healthCheckPath: /
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.4
