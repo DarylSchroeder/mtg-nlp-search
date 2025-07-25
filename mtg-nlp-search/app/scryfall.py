@@ -213,15 +213,15 @@ def parse_raw_query(raw_query: str) -> str:
     # Fallback: try the original query as-is
     return raw_query
 
-def search_scryfall(filters: dict):
-    """Search Scryfall API with built query"""
+def search_scryfall(filters: dict, page: int = 1):
+    """Search Scryfall API with built query, getting specific page"""
     query = build_query(filters)
     
     print(f"Scryfall query: {query}")  # Debug output
     
-    # URL encode the query
+    # URL encode the query and add page parameter
     encoded_query = urllib.parse.quote(query)
-    url = f"https://api.scryfall.com/cards/search?q={encoded_query}"
+    url = f"https://api.scryfall.com/cards/search?q={encoded_query}&page={page}"
     
     # Set proper headers as required by Scryfall API
     headers = {
@@ -239,19 +239,22 @@ def search_scryfall(filters: dict):
         if response.status_code == 200:
             data = response.json()
             cards = data.get("data", [])
-            print(f"Found {len(cards)} cards")  # Debug output
-            return {"cards": cards, "query": query}
+            total_cards = data.get("total_cards", len(cards))  # Use Scryfall's total count
+            
+            print(f"Found {total_cards} total cards (showing page {page} with {len(cards)} cards)")
+            return {"cards": cards, "query": query, "total_cards": total_cards}
+                    
         elif response.status_code == 404:
             # No cards found
             print(f"No results for query: {query}")
-            return {"cards": [], "query": query}
+            return {"cards": [], "query": query, "total_cards": 0}
         else:
             print(f"Scryfall API error: {response.status_code} - {response.text}")
-            return {"cards": [], "query": query}
+            return {"cards": [], "query": query, "total_cards": 0}
             
     except requests.exceptions.RequestException as e:
         print(f"Request error: {e}")
-        return {"cards": [], "query": query}
+        return {"cards": [], "query": query, "total_cards": 0}
     except Exception as e:
         print(f"Unexpected error: {e}")
-        return {"cards": [], "query": query}
+        return {"cards": [], "query": query, "total_cards": 0}

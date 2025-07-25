@@ -138,20 +138,36 @@ def search(
             filters = {"raw_query": prompt}
             print(f"API: Using raw query: {prompt}")
         
+        # Calculate which Scryfall page we need
+        # Scryfall uses 175 cards per page, our API uses configurable per_page
+        scryfall_page = ((page - 1) * per_page) // 175 + 1
+        
         # Search Scryfall with pagination
-        search_result = search_scryfall(filters)
-        all_cards = search_result["cards"]
+        search_result = search_scryfall(filters, scryfall_page)
+        scryfall_cards = search_result["cards"]
         scryfall_query = search_result["query"]
-        total_results = len(all_cards)
+        total_results = search_result.get("total_cards", len(scryfall_cards))
         
         print(f"API: Scryfall query: {scryfall_query}")
         print(f"API: Total results: {total_results}")
+        print(f"API: Requested page {page}, fetching Scryfall page {scryfall_page}")
         print(f"API: Final filters: {filters}")
         
-        # Calculate pagination
-        start_idx = (page - 1) * per_page
-        end_idx = start_idx + per_page
-        cards = all_cards[start_idx:end_idx]
+        # Calculate pagination within the Scryfall page
+        scryfall_start_idx = ((page - 1) * per_page) % 175
+        scryfall_end_idx = min(scryfall_start_idx + per_page, len(scryfall_cards))
+        cards = scryfall_cards[scryfall_start_idx:scryfall_end_idx]
+        
+        # If we need more cards and there are more Scryfall pages, fetch the next page
+        if len(cards) < per_page and scryfall_start_idx + per_page > 175:
+            next_scryfall_page = scryfall_page + 1
+            next_search_result = search_scryfall(filters, next_scryfall_page)
+            next_cards = next_search_result["cards"]
+            
+            # Add remaining cards from next page
+            remaining_needed = per_page - len(cards)
+            cards.extend(next_cards[:remaining_needed])
+            print(f"API: Fetched additional {len(next_cards[:remaining_needed])} cards from page {next_scryfall_page}")
         
         total_pages = (total_results + per_page - 1) // per_page  # Ceiling division
         
