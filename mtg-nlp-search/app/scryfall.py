@@ -51,7 +51,7 @@ def build_query(filters: dict) -> str:
 def build_effect_query(effect: str) -> str:
     """Convert effect keywords to Scryfall oracle text searches"""
     effect_mappings = {
-        'counter': 'o:"counter"',
+        'counter': '(o:"counter target" OR o:"counter that" OR o:"counter it" OR o:"counter all" OR o:"counter each")',
         'draw': 'o:"draw"',
         'removal': '(o:"destroy target" OR o:"exile target")',
         'ramp': '(o:"search your library" AND o:"land")',
