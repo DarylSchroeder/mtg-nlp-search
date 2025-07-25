@@ -59,6 +59,7 @@ def extract_filters_fallback(prompt: str) -> dict:
     mana_patterns = [
         r'(\d+)\s+mana',
         r'cmc\s*:?\s*(\d+)',
+        r'(\d+)\s+cmc',  # Added pattern for "1 cmc", "2 cmc", etc.
         r'costs?\s+(\d+)',
         r'(\d+)\s+cost'
     ]
