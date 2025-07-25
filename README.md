@@ -2,6 +2,24 @@
 
 A complete natural language search system for Magic: The Gathering cards with both API backend and web frontend.
 
+## Repository Structure
+
+This is the **backend API repository**. The complete system consists of two repositories:
+
+- **Backend API**: `DarylSchroeder/mtg-nlp-search` (this repository)
+  - FastAPI backend with `/search` and `/analyze-deck` endpoints
+  - Natural language processing for MTG card queries
+  - Scryfall API integration
+  - Deployed at: API endpoints for frontend consumption
+
+- **Frontend Web App**: `DarylSchroeder/rofellods-nlp-mtg` (sister repository at `../rofellods-nlp-mtg`)
+  - HTML/CSS/JavaScript web interface
+  - Consumes the backend API endpoints
+  - User-friendly search interface with card display
+  - Deployed at: https://rofellods-nlp-mtg.onrender.com
+
+The frontend repository contains the web interface that consumes this API.
+
 ## Features
 
 ### 🔍 **Natural Language Search**
