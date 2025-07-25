@@ -6,8 +6,47 @@ from app.deck_analyzer import DeckAnalyzer
 from app.commanders import commander_db
 from typing import List
 import asyncio
+import datetime
+import subprocess
+import os
 
 app = FastAPI(title="MTG NLP Search", description="Natural language search for Magic: The Gathering cards")
+
+# Store server start time
+SERVER_START_TIME = datetime.datetime.utcnow()
+
+def get_git_commit_hash():
+    """Get the current git commit hash"""
+    try:
+        # Try to get the commit hash from git
+        result = subprocess.run(
+            ['git', 'rev-parse', 'HEAD'], 
+            capture_output=True, 
+            text=True, 
+            cwd=os.path.dirname(os.path.dirname(os.path.dirname(__file__)))  # Go up to repo root
+        )
+        if result.returncode == 0:
+            return result.stdout.strip()[:8]  # Short hash
+        else:
+            return "unknown"
+    except Exception:
+        return "unknown"
+
+def get_git_branch():
+    """Get the current git branch"""
+    try:
+        result = subprocess.run(
+            ['git', 'rev-parse', '--abbrev-ref', 'HEAD'], 
+            capture_output=True, 
+            text=True,
+            cwd=os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+        )
+        if result.returncode == 0:
+            return result.stdout.strip()
+        else:
+            return "unknown"
+    except Exception:
+        return "unknown"
 
 # Add CORS middleware to allow frontend access
 app.add_middleware(
@@ -193,6 +232,39 @@ def get_sample_queries():
             "fetchland"
         ],
         "note": "These are basic examples for API testing. Frontend should manage its own sample queries with UI-specific metadata."
+    }
+
+@app.get("/health-check")
+def health_check():
+    """Health check endpoint with deployment metadata"""
+    current_time = datetime.datetime.utcnow()
+    uptime_seconds = (current_time - SERVER_START_TIME).total_seconds()
+    
+    # Format uptime in a human-readable way
+    uptime_hours = int(uptime_seconds // 3600)
+    uptime_minutes = int((uptime_seconds % 3600) // 60)
+    uptime_secs = int(uptime_seconds % 60)
+    
+    uptime_formatted = f"{uptime_hours}h {uptime_minutes}m {uptime_secs}s"
+    
+    return {
+        "status": "healthy",
+        "timestamp": current_time.isoformat() + "Z",
+        "server_start_time": SERVER_START_TIME.isoformat() + "Z",
+        "uptime": {
+            "seconds": int(uptime_seconds),
+            "formatted": uptime_formatted
+        },
+        "deployment": {
+            "git_commit": get_git_commit_hash(),
+            "git_branch": get_git_branch(),
+            "environment": "render" if os.environ.get("RENDER") else "local"
+        },
+        "services": {
+            "commanders_loaded": commander_db.loaded,
+            "commander_count": len(commander_db.commanders) if commander_db.loaded else 0
+        },
+        "version": "1.0.0"  # You can update this manually or read from a version file
     }
 
 @app.get("/commanders")

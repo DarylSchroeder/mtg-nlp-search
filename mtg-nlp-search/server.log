@@ -7,3 +7,23 @@ Scryfall query: type:"artifact creature"
 Found 175 cards
 Found 175 total cards, showing page 1/9
 INFO:     127.0.0.1:36536 - "GET /search?prompt=artifact+creature HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35140 - "GET /samples HTTP/1.1" 404 Not Found
+Extracted filters: {'cmc': 1, 'effects': ['counter']}
+Scryfall query: cmc:1 (o:"counter target" OR o:"counter that" OR o:"counter it" OR o:"counter all" OR o:"counter each")
+Request error: HTTPSConnectionPool(host='api.scryfall.com', port=443): Read timed out. (read timeout=10)
+Found 0 total cards, showing page 1/0
+INFO:     127.0.0.1:35152 - "GET /search?prompt=1%20mana%20counterspell HTTP/1.1" 200 OK
+Extracted filters: {'cmc': 2, 'type': 'instant', 'coloridentity': 'BR'}
+Scryfall query: cmc:2 type:instant coloridentity:BR
+Found 175 cards
+Found 175 total cards, showing page 1/9
+INFO:     127.0.0.1:35112 - "GET /search?prompt=2%20cmc%20rakdos%20instant HTTP/1.1" 200 OK
+Extracted filters: {'scryfall_query': 'is:fetchland'}
+Scryfall query: is:fetchland
+Found 10 cards
+Found 10 total cards, showing page 1/1
+INFO:     127.0.0.1:35128 - "GET /search?prompt=fetchland HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [19595]

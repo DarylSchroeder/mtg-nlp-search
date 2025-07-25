@@ -70,12 +70,22 @@ The frontend repository contains the web interface that consumes this API.
 curl -G "http://localhost:8000/search" --data-urlencode "prompt=1 mana counterspell"
 ```
 
-### `/analyze-deck` - Deck Analysis (NEW!)
+### `/analyze-deck` - Deck Analysis
 ```bash
 curl -X POST "http://localhost:8000/analyze-deck" \
   -H "Content-Type: application/json" \
   -d '["Murder", "Cancel", "Lightning Bolt"]'
 ```
+
+### `/health-check` - Server Health & Deployment Info (NEW!)
+```bash
+curl "http://localhost:8000/health-check"
+```
+Returns server metadata including:
+- Server start time and uptime
+- Git commit hash and branch
+- Commander database status
+- Environment information
 
 ## Example Queries
 
