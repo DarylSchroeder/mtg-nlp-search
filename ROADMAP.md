@@ -59,6 +59,13 @@ Build a complete MTG NLP Search web application with FastAPI backend and modern 
 - [ ] Card comparison tools
 - [ ] Integration with other MTG APIs (EDHREC, MTGTop8)
 
+## 7. Optional Enhancements (Backburner)
+- [ ] **Hybrid NLP Approach**: Add OpenAI as optional fallback for complex queries
+  - Keep built-in parser as primary (fast, free, reliable)
+  - Use OpenAI for edge cases when API key is available
+  - Maintains zero-config deployment while enabling advanced natural language
+  - Cost: ~$0.01-0.03 per complex query
+
 ---
 
 ## 🎯 Next Immediate Steps (Priority Order)
