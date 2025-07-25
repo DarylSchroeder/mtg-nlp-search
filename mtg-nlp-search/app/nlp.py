@@ -26,7 +26,8 @@ LAND_TYPES = {
     'bounceland': 'is:bounceland',
     'scryland': 'is:scryland',
     'creatureland': 'is:creatureland',
-    'manland': 'is:creatureland'
+    'manland': 'is:creatureland',
+    'dual land': 'type:land (o:{W} and o:{U}) or (o:{W} and o:{B}) or (o:{W} and o:{R}) or (o:{W} and o:{G}) or (o:{U} and o:{B}) or (o:{U} and o:{R}) or (o:{U} and o:{G}) or (o:{B} and o:{R}) or (o:{B} and o:{G}) or (o:{R} and o:{G})'
 }
 
 CARD_TYPES = {
@@ -63,23 +64,60 @@ def extract_filters_fallback(prompt: str) -> dict:
     filters = {}
     
     # Extract mana cost patterns
-    mana_patterns = [
-        r'(\d+)\s+mana',
-        r'cmc\s*:?\s*(\d+)',
-        r'(\d+)\s+cmc',  # Added pattern for "1 cmc", "2 cmc", etc.
-        r'costs?\s+(\d+)',
-        r'(\d+)\s+cost'
+    # Handle range patterns first (6+, 2 or less, etc.)
+    range_patterns = [
+        (r'(\d+)\+\s+mana', '>='),  # "6+ mana"
+        (r'(\d+)\s*\+\s*mana', '>='),  # "6 + mana"
+        (r'(\d+)\s*or\s+less', '<='),  # "2 or less"
+        (r'costs?\s+(\d+)\s+or\s+less', '<='),  # "costs 2 or less"
+        (r'(\d+)\s+or\s+fewer', '<='),  # "2 or fewer"
     ]
     
-    for pattern in mana_patterns:
+    cmc_operator = None
+    cmc_value = None
+    
+    for pattern, operator in range_patterns:
         match = re.search(pattern, prompt_lower)
         if match:
-            filters['cmc'] = int(match.group(1))
+            cmc_operator = operator
+            cmc_value = int(match.group(1))
             break
+    
+    if cmc_operator and cmc_value is not None:
+        # Store both the numeric value and build scryfall query with operator
+        filters['cmc'] = cmc_value
+        if 'scryfall_query' not in filters:
+            filters['scryfall_query'] = f'cmc{cmc_operator}{cmc_value}'
+        else:
+            filters['scryfall_query'] += f' cmc{cmc_operator}{cmc_value}'
+    else:
+        # Handle exact mana costs if no range found
+        mana_patterns = [
+            r'(\d+)\s+mana',
+            r'cmc\s*:?\s*(\d+)',
+            r'(\d+)\s+cmc',  # Added pattern for "1 cmc", "2 cmc", etc.
+            r'costs?\s+(\d+)',
+            r'(\d+)\s+cost'
+        ]
+        
+        for pattern in mana_patterns:
+            match = re.search(pattern, prompt_lower)
+            if match:
+                filters['cmc'] = int(match.group(1))
+                break
     
     # Handle zero mana specially
     if 'zero mana' in prompt_lower or '0 mana' in prompt_lower:
         filters['cmc'] = 0
+    
+    # Handle X cost spells
+    if re.search(r'\bx\s+cost', prompt_lower) or re.search(r'\bx\s+mana', prompt_lower):
+        cmc_value = 1  # X costs are typically 1 or more
+        filters['cmc'] = cmc_value
+        if 'scryfall_query' not in filters:
+            filters['scryfall_query'] = f'cmc>={cmc_value}'
+        else:
+            filters['scryfall_query'] += f' cmc>={cmc_value}'
     
     # Extract power/toughness
     pt_match = re.search(r'(\d+)/(\d+)', prompt)
@@ -94,12 +132,23 @@ def extract_filters_fallback(prompt: str) -> dict:
         if card_type in prompt_lower:
             found_types.append(card_type)
     
-    # If multiple types found, combine them in the correct order for Scryfall
+    # If multiple types found, create separate type: queries for Scryfall
     if found_types:
         if len(found_types) > 1:
             # Sort types to match Scryfall's expected order (artifact before creature)
             type_order = {'artifact': 0, 'creature': 1, 'enchantment': 2, 'instant': 3, 'sorcery': 4, 'planeswalker': 5, 'land': 6}
             found_types.sort(key=lambda x: type_order.get(x, 99))
+            
+            # For multiple types, create individual type: queries
+            type_queries = [f'type:{t}' for t in found_types]
+            type_query = ' '.join(type_queries)
+            
+            if 'scryfall_query' not in filters:
+                filters['scryfall_query'] = type_query
+            else:
+                filters['scryfall_query'] += f' {type_query}'
+            
+            # Also store the combined type for backward compatibility
             filters['type'] = ' '.join(found_types)
         else:
             filters['type'] = found_types[0]
@@ -121,15 +170,19 @@ def extract_filters_fallback(prompt: str) -> dict:
         if land_type in prompt_lower:
             # Check for color combinations with land types
             color_result = extract_color_identity(prompt_lower)
+            
+            # Always set type:land for land queries
+            filters['type'] = 'land'
+            
             if color_result[0]:  # If color_identity is not None
                 color_identity, is_commander_context = color_result[0], color_result[1]
                 if is_commander_context:
                     # Commander context uses coloridentity
-                    return {'scryfall_query': f'{scryfall_query} coloridentity:{color_identity}'}
+                    return {'type': 'land', 'coloridentity': color_identity, 'scryfall_query': f'{scryfall_query} coloridentity:{color_identity}'}
                 else:
                     # Land types with guild names use color
-                    return {'scryfall_query': f'{scryfall_query} color:{color_identity}'}
-            return {'scryfall_query': scryfall_query}
+                    return {'type': 'land', 'colors': color_identity, 'scryfall_query': f'{scryfall_query} color:{color_identity}'}
+            return {'type': 'land', 'scryfall_query': scryfall_query}
     
     # Extract color identity
     color_result = extract_color_identity(prompt_lower)
@@ -146,7 +199,7 @@ def extract_filters_fallback(prompt: str) -> dict:
     # Extract common effects
     effects = []
     effect_patterns = {
-        'counter': ['counterspell', r'\bcounter\b(?!.*cannot be countered)(?!.*can\'t be countered)'],
+        'counter': ['counterspell', r'\bcounters?\b(?!.*cannot be countered)(?!.*can\'t be countered)'],
         'draw': ['draw', 'card draw'],
         'removal': ['destroy', 'remove', 'removal'],
         'ramp': [r'\bramp\b', r'search.*land(?!.*mana)', 'acceleration', 'mana acceleration'],
@@ -169,9 +222,9 @@ def extract_filters_fallback(prompt: str) -> dict:
                 if pattern == 'counterspell' and 'counterspell' in prompt_lower:
                     effects.append(effect)
                     break
-                elif pattern.startswith(r'\bcounter\b'):
-                    # Check if "counter" appears but NOT in "cannot be countered" context
-                    if re.search(r'\bcounter\b', prompt_lower):
+                elif pattern.startswith(r'\bcounters?\b'):
+                    # Check if "counter" or "counters" appears but NOT in "cannot be countered" context
+                    if re.search(r'\bcounters?\b', prompt_lower):
                         # Exclude if it's in a "cannot be countered" context
                         if not re.search(r'cannot be countered|can\'t be countered|this spell cannot be countered', prompt_lower):
                             effects.append(effect)
