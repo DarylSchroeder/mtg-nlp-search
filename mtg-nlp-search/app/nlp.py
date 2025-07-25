@@ -180,53 +180,5 @@ def extract_filters(prompt: str) -> dict:
     if 'scryfall_query' in fallback_filters:
         return fallback_filters
     
-    # Try OpenAI for complex queries
-    if os.getenv("OPENAI_API_KEY"):
-        try:
-            system_prompt = """You are an expert Magic: The Gathering card search assistant. 
-            Convert natural language queries into structured filters for Scryfall API.
-            
-            Return JSON with these possible fields:
-            - "cmc": mana cost (number)
-            - "type": card type ("instant", "creature", etc.)
-            - "coloridentity": color identity codes ("W", "UB", "RGW", etc.)
-            - "power": creature power (number)
-            - "toughness": creature toughness (number)  
-            - "effects": array of effects to search in oracle text
-            - "scryfall_query": direct Scryfall query string (use for complex searches)
-            
-            Guild/Color mappings:
-            - rakdos = BR, azorius = WU, golgari = BG, simic = UG, boros = RW
-            - esper = WUB, jund = BRG, naya = RGW, abzan = WBG, jeskai = URW
-            
-            Land types: shockland, fetchland, triome, checkland, fastland, painland
-            
-            Examples:
-            "2 mana instant" → {"cmc": 2, "type": "instant"}
-            "rakdos removal" → {"coloridentity": "BR", "effects": ["destroy"]}
-            "shockland" → {"scryfall_query": "is:shockland"}
-            """
-
-            messages = [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": prompt}
-            ]
-
-            response = client.chat.completions.create(
-                model="gpt-4o",
-                messages=messages,
-                temperature=0.1
-            )
-            
-            content = response.choices[0].message.content
-            openai_filters = json.loads(content)
-            
-            # Merge OpenAI results with fallback (fallback takes precedence for Magic-specific terms)
-            merged_filters = {**openai_filters, **fallback_filters}
-            return merged_filters
-            
-        except Exception as e:
-            print(f"OpenAI parsing failed: {e}")
-    
     # Return fallback results
     return fallback_filters if fallback_filters else {"raw_query": prompt}
