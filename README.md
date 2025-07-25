@@ -1,15 +1,23 @@
 # MTG NLP Search
 
-A natural language search API for Magic: The Gathering cards using the Scryfall API.
+A complete natural language search system for Magic: The Gathering cards with both API backend and web frontend.
 
 ## Features
 
-- **Natural Language Parsing**: Search using plain English like "1 mana counterspell" or "fetchland"
-- **Mana Cost Detection**: Automatically parses "2 mana", "3 cost", etc. into CMC filters
+### 🔍 **Natural Language Search**
+- **Smart Parsing**: Search using plain English like "1 mana counterspell" or "fetchland"
+- **Mana Cost Detection**: Automatically parses "2 mana", "3 cost", "1 cmc", etc. into CMC filters
 - **Color Identity**: Supports guild names (azorius, simic) and commander deck contexts
 - **Card Types**: Recognizes creatures, instants, sorceries, lands, etc.
 - **Effects**: Detects counterspells, ramp, removal, card draw, and more
 - **Land Types**: Understands fetchlands, shocklands, triomes, etc.
+
+### 🃏 **Deck Analysis** (NEW!)
+- **Deck List Parsing**: Import standard MTG deck formats with set codes and collector numbers
+- **Power Level Analysis**: Identifies underpowered cards using EDHREC rankings and efficiency metrics
+- **Smart Suggestions**: Recommends better alternatives for removal, counterspells, and card draw
+- **Format Awareness**: Tailored suggestions for Commander, Standard, and other formats
+- **Comprehensive Reports**: Detailed analysis with improvement reasons and statistics
 
 ## Quick Start
 
@@ -30,6 +38,20 @@ A natural language search API for Magic: The Gathering cards using the Scryfall 
    ```bash
    curl -G "http://localhost:8000/search" --data-urlencode "prompt=1 mana counterspell"
    ```
+
+## API Endpoints
+
+### `/search` - Natural Language Card Search
+```bash
+curl -G "http://localhost:8000/search" --data-urlencode "prompt=1 mana counterspell"
+```
+
+### `/analyze-deck` - Deck Analysis (NEW!)
+```bash
+curl -X POST "http://localhost:8000/analyze-deck" \
+  -H "Content-Type: application/json" \
+  -d '["Murder", "Cancel", "Lightning Bolt"]'
+```
 
 ## Example Queries
 
@@ -78,7 +100,8 @@ Fixed critical parsing issue where "mana" was incorrectly triggering ramp detect
 
 ## Architecture
 
-- **FastAPI** backend with single `/search` endpoint
+- **FastAPI** backend with `/search` and `/analyze-deck` endpoints
 - **NLP Parser** extracts filters from natural language
-- **Scryfall API** integration for card data
+- **Deck Analyzer** identifies underpowered cards and suggests improvements
+- **Scryfall API** integration for card data and EDHREC rankings
 - **Simple testing** with vanilla bash/curl (no frameworks)

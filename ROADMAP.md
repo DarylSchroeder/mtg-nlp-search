@@ -3,7 +3,7 @@
 ## Overview
 Build a complete MTG NLP Search web application with FastAPI backend and modern frontend that allows users to search Magic: The Gathering cards using natural language.
 
-## Current Status: Step 1 ✅ → Step 2 🚧
+## Current Status: Step 3 ✅ → Step 4 🚧
 
 ---
 
@@ -15,89 +15,113 @@ Build a complete MTG NLP Search web application with FastAPI backend and modern 
 - ✅ Structured JSON responses with card data
 - ✅ Basic logging and monitoring
 
-## 2. Backend Enhancement & Production Readiness (Current Stage)
+## 2. Backend Enhancement & Production Readiness ✅ COMPLETE
 - ✅ Add `python-dotenv` to load .env
 - ✅ Improve parsing resilience (handle GPT responses gracefully)
-- [ ] Add comprehensive test suite (pytest)
-- [ ] Add input validation with Pydantic models
-- [ ] Fix deprecated OpenAI API usage
-- [ ] Add caching layer (Redis or simple LRU)
-- [ ] Add TCGPlayer price lookup for card pricing
-- [ ] Add deployment configuration (Docker, proper requirements.txt)
-- [ ] Add health checks and monitoring endpoints
+- ✅ Fix critical CMC parsing bug ("1 cmc", "2 cmc", "3 cmc" now work correctly)
+- ✅ Add comprehensive test suite (bash/curl based)
+- ✅ Add input validation with proper error handling
+- ✅ Add deployment configuration (Render.com ready)
+- ✅ Add health checks and monitoring capabilities
 
-## 3. Frontend Development
-- [ ] Choose frontend framework (React, Vue, or vanilla JS)
-- [ ] Create responsive UI for card search
-- [ ] Implement search interface with autocomplete
-- [ ] Design card display components with images
-- [ ] Add advanced search filters (color, type, mana cost, etc.)
-- [ ] Implement search history and favorites
-- [ ] Add mobile-responsive design
+## 3. Frontend Development ✅ COMPLETE
+- ✅ Modern responsive web interface (HTML/CSS/JS)
+- ✅ Card search with natural language input
+- ✅ Beautiful card display with images and details
+- ✅ Pagination for large result sets
+- ✅ Sample searches and help system
+- ✅ Mobile-responsive design
+- ✅ Loading states and error handling
 
-## 4. Full-Stack Integration
-- [ ] Set up CORS for frontend-backend communication
-- [ ] Implement proper API error handling in frontend
-- [ ] Add loading states and user feedback
-- [ ] Optimize API calls and implement client-side caching
-- [ ] Add search analytics and usage tracking
+## 4. Deck Analysis Feature ✅ COMPLETE (NEW!)
+- ✅ `/analyze-deck` API endpoint
+- ✅ Deck list parsing (standard MTG format with set codes)
+- ✅ Power level analysis using EDHREC rankings
+- ✅ Underpowered card detection (Murder, Cancel, etc.)
+- ✅ Smart improvement suggestions by category
+- ✅ Frontend deck analyzer page with beautiful UI
+- ✅ Support for sideboard parsing
+- ✅ Double-faced card handling
 
-## 5. Deployment & Hosting
-- [ ] Set up production database (if needed for user features)
-- [ ] Configure production environment variables
-- [ ] Deploy backend (AWS Lambda, EC2, or container service)
-- [ ] Deploy frontend (Netlify, Vercel, or S3 + CloudFront)
-- [ ] Set up domain and SSL certificates
-- [ ] Configure monitoring and logging
+## 5. Full-Stack Integration ✅ COMPLETE
+- ✅ CORS configured for frontend-backend communication
+- ✅ Proper API error handling in frontend
+- ✅ Loading states and user feedback
+- ✅ Optimized API calls with graceful fallbacks
+- ✅ Clean separation of concerns
 
-## 6. Advanced Features (Future)
+## 6. Deployment & Hosting ✅ COMPLETE
+- ✅ Backend deployed on Render.com (auto-deploy from GitHub)
+- ✅ Frontend deployed on Render.com (auto-deploy from GitHub)
+- ✅ Production environment configuration
+- ✅ SSL certificates and custom domain ready
+- ✅ Zero-config deployment (no API keys required)
+
+## 7. Advanced Features (Current Focus)
+- ✅ **Deck Analysis System**: Complete deck optimization tool
+- [ ] **Moxfield Integration**: Direct deck import from URLs
+- [ ] **Format Detection**: Auto-detect Standard/Commander/etc.
+- [ ] **Enhanced Card Database**: More sophisticated power level algorithms
+- [ ] **Price Integration**: TCGPlayer/CardKingdom pricing data
+- [ ] **Collection Tracking**: User accounts and deck saving
+
+## 8. Future Enhancements (Backburner)
 - [ ] User accounts and authentication
-- [ ] Deck building functionality
-- [ ] Card collection tracking
-- [ ] Price alerts and watchlists
 - [ ] Advanced search with boolean operators
 - [ ] Card comparison tools
-- [ ] Integration with other MTG APIs (EDHREC, MTGTop8)
-
-## 7. Optional Enhancements (Backburner)
+- [ ] Integration with MTGTop8 for meta analysis
 - [ ] **Hybrid NLP Approach**: Add OpenAI as optional fallback for complex queries
   - Keep built-in parser as primary (fast, free, reliable)
   - Use OpenAI for edge cases when API key is available
   - Maintains zero-config deployment while enabling advanced natural language
-  - Cost: ~$0.01-0.03 per complex query
 
 ---
 
 ## 🎯 Next Immediate Steps (Priority Order)
 
-### High Priority (Backend Stability)
-1. **Add comprehensive test suite** - Unit tests for query parsing, API endpoints
-2. **Add input validation** - Pydantic models for request/response validation  
-3. **Fix deprecated OpenAI API usage** - Update to latest OpenAI client patterns
-4. **Add deployment configuration** - Docker, proper requirements.txt, health checks
+### High Priority (Deck Analysis Enhancement)
+1. **Moxfield Integration** - Direct deck import from Moxfield URLs
+2. **Format Detection** - Auto-detect deck format from card composition
+3. **Enhanced Analysis** - More sophisticated power level algorithms
+4. **Price Integration** - Add TCGPlayer pricing to improvement suggestions
 
-### Medium Priority (Backend Enhancement)
-5. **Add caching layer** - Redis or simple LRU for Scryfall responses
-6. **Add TCGPlayer price lookup** - Enrich card data with pricing information
-7. **Improve query parsing** - Handle more complex natural language patterns
+### Medium Priority (User Experience)
+5. **Collection Tracking** - User accounts and deck saving
+6. **Advanced Filters** - More granular search options
+7. **Card Comparison** - Side-by-side card analysis
+8. **Mobile App** - Native mobile application
 
-### Next Phase (Frontend Development)
-8. **Choose and set up frontend framework** - React/Vue/vanilla JS
-9. **Create basic search interface** - Input field, results display
-10. **Implement card display components** - Show card images, details, pricing
+### Future Considerations
+9. **Meta Analysis** - Integration with tournament data
+10. **AI Enhancement** - Optional OpenAI integration for complex queries
+
+---
+
+## 🏆 Major Accomplishments
+
+### Recently Completed (2025-07-25)
+- ✅ **Fixed Critical CMC Bug**: "3 cmc counterspell for atraxa" now works correctly
+- ✅ **Deck Analyzer Feature**: Complete deck analysis system with power level assessment
+- ✅ **Frontend Enhancement**: Moved sample searches to hamburger menu, improved UX
+- ✅ **Production Ready**: Both backend and frontend fully deployed and operational
+
+### System Highlights
+- **Zero-Config Deployment**: Works without API keys or external dependencies
+- **Comprehensive Testing**: Robust test suite with real-world scenarios
+- **Beautiful UI**: Modern, responsive design with excellent user experience
+- **Smart Analysis**: Identifies underpowered cards and suggests improvements
+- **Format Support**: Handles standard MTG deck list formats perfectly
 
 ---
 
 ## Key Resources
+- [Live Frontend](https://rofellods-nlp-mtg.onrender.com)
+- [Live API](https://mtg-nlp-search.onrender.com)
 - [FastAPI Documentation](https://fastapi.tiangolo.com/)
 - [Scryfall API Documentation](https://scryfall.com/docs/api)
-- [OpenAI API Documentation](https://platform.openai.com/docs/api-reference)
-- [React Documentation](https://react.dev/) (if choosing React)
-- [Vue.js Documentation](https://vuejs.org/) (if choosing Vue)
 
 ## Example Queries to Test
-- "Find a 2 mana instant that counters spells"
-- "Show me red creatures with power 4 or greater that cost 3 mana"
-- "I need a planeswalker that can draw cards and costs less than 5 mana"
-- "Find artifacts that can tap for mana and have converted mana cost 2"
-- "Show me blue counterspells that cost 1 mana"
+- **Search**: "Find a 2 mana instant that counters spells"
+- **Search**: "3 cmc counterspell for atraxa" (recently fixed!)
+- **Search**: "Show me red creatures with power 4 or greater that cost 3 mana"
+- **Deck Analysis**: Paste any standard MTG deck list for improvement suggestions
