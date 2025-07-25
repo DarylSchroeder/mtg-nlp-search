@@ -1,0 +1,200 @@
+=== MTG NLP Search Test Results ===
+Testing 50 scenarios...
+
+Test 1: "12/12 dinosaur"
+Expected: Ghalta, Primal Hunger
+⚠️  NO RESULTS: Query parsed but no cards found
+
+Test 2: "1/1 creature that makes tokens"
+Expected: Monastery Mentor
+⚠️  NO RESULTS: Query parsed but no cards found
+
+Test 3: "0/1 defender"
+Expected: Wall of Omens
+⚠️  NO RESULTS: Query parsed but no cards found
+
+Test 4: "20/20 creature"
+Expected: Marit Lage token creators
+⚠️  NO RESULTS: Query parsed but no cards found
+
+Test 5: "zero mana artifact that makes mana"
+Expected: Black Lotus, Mox cards
+⚠️  NO RESULTS: Query parsed but no cards found
+
+Test 6: "1 mana counterspell"
+Expected: Spell Pierce, Mental Misstep
+⚠️  NO RESULTS: Query parsed but no cards found
+
+Test 7: "2 mana instant that draws cards"
+Expected: Divination, Think Twice
+✅ SUCCESS: Found 1 cards
+   First result: Abeyance
+
+Test 8: "3 mana planeswalker"
+Expected: 3-cost planeswalkers
+⚠️  NO RESULTS: Query parsed but no cards found
+
+Test 9: "rakdos removal spell"
+Expected: Terminate, Dreadbore
+⚠️  NO RESULTS: Query parsed but no cards found
+
+Test 10: "azorius counterspell"
+Expected: Dovin's Veto, Absorb
+⚠️  NO RESULTS: Query parsed but no cards found
+
+Test 11: "golgari creature"
+Expected: BG creatures
+⚠️  NO RESULTS: Query parsed but no cards found
+
+Test 12: "simic card draw"
+Expected: Urban Evolution, Kruphix
+⚠️  NO RESULTS: Query parsed but no cards found
+
+Test 13: "boros aggro creature"
+Expected: RW aggressive creatures
+⚠️  NO RESULTS: Query parsed but no cards found
+
+Test 14: "esper control spell"
+Expected: WUB control spells
+⚠️  NO RESULTS: Query parsed but no cards found
+
+Test 15: "naya creature"
+Expected: RGW creatures
+⚠️  NO RESULTS: Query parsed but no cards found
+
+Test 16: "jund removal"
+Expected: BRG removal
+⚠️  NO RESULTS: Query parsed but no cards found
+
+Test 17: "abzan creature"
+Expected: WBG creatures
+⚠️  NO RESULTS: Query parsed but no cards found
+
+Test 18: "jeskai instant"
+Expected: URW instants
+⚠️  NO RESULTS: Query parsed but no cards found
+
+Test 19: "sultai card"
+Expected: UBG cards
+⚠️  NO RESULTS: Query parsed but no cards found
+
+Test 20: "counterspell that will fit in my Chulane deck"
+Expected: GWU counterspells
+⚠️  NO RESULTS: Query parsed but no cards found
+
+Test 21: "removal spell for my Alesha deck"
+Expected: RWB removal
+⚠️  NO RESULTS: Query parsed but no cards found
+
+Test 22: "ramp spell for my Kenrith deck"
+Expected: 5-color ramp
+⚠️  NO RESULTS: Query parsed but no cards found
+
+Test 23: "shockland"
+Expected: Blood Crypt, Steam Vents
+⚠️  NO RESULTS: Query parsed but no cards found
+
+Test 24: "fetchland"
+Expected: Polluted Delta, Windswept Heath
+⚠️  NO RESULTS: Query parsed but no cards found
+
+Test 25: "triome"
+Expected: Indatha Triome, Ketria Triome
+✅ SUCCESS: Found 1 cards
+   First result: Indatha Triome
+
+Test 26: "checkland"
+Expected: Dragonskull Summit, Glacial Fortress
+⚠️  NO RESULTS: Query parsed but no cards found
+
+Test 27: "fastland"
+Expected: Blackcleave Cliffs, Seachrome Coast
+⚠️  NO RESULTS: Query parsed but no cards found
+
+Test 28: "painland"
+Expected: Caves of Koilos, Llanowar Wastes
+⚠️  NO RESULTS: Query parsed but no cards found
+
+Test 29: "filterland"
+Expected: Mystic Gate, Sunken Ruins
+⚠️  NO RESULTS: Query parsed but no cards found
+
+Test 30: "bounceland"
+Expected: Azorius Chancery, Dimir Aqueduct
+⚠️  NO RESULTS: Query parsed but no cards found
+
+Test 31: "scryland"
+Expected: Temple of Enlightenment, Temple of Malice
+⚠️  NO RESULTS: Query parsed but no cards found
+
+Test 32: "creatureland"
+Expected: Celestial Colonnade, Raging Ravine
+⚠️  NO RESULTS: Query parsed but no cards found
+
+Test 33: "commander"
+Expected: legendary creatures
+✅ SUCCESS: Found 1 cards
+   First result: Ambush Commander
+
+Test 34: "vanilla creature"
+Expected: creatures with no abilities
+⚠️  NO RESULTS: Query parsed but no cards found
+
+Test 35: "french vanilla creature"
+Expected: creatures with only keyword abilities
+⚠️  NO RESULTS: Query parsed but no cards found
+
+Test 36: "double-faced card"
+Expected: Delver of Secrets, Huntmaster
+⚠️  NO RESULTS: Query parsed but no cards found
+
+Test 37: "modal double-faced card"
+Expected: Zendikar Rising DFCs
+⚠️  NO RESULTS: Query parsed but no cards found
+
+Test 38: "split card"
+Expected: Fire // Ice, Life // Death
+⚠️  NO RESULTS: Query parsed but no cards found
+
+Test 39: "transform card"
+Expected: Innistrad transform cards
+⚠️  NO RESULTS: Query parsed but no cards found
+
+Test 40: "rakdos shockland"
+Expected: Blood Crypt
+⚠️  NO RESULTS: Query parsed but no cards found
+
+Test 41: "simic fetchland"
+Expected: Misty Rainforest
+⚠️  NO RESULTS: Query parsed but no cards found
+
+Test 42: "esper triome"
+Expected: none exist
+⚠️  NO RESULTS: Query parsed but no cards found
+
+Test 43: "azorius checkland"
+Expected: Glacial Fortress
+⚠️  NO RESULTS: Query parsed but no cards found
+
+Test 44: "golgari painland"
+Expected: Llanowar Wastes
+⚠️  NO RESULTS: Query parsed but no cards found
+
+Test 45: "blue fetchland"
+Expected: Flooded Strand, Polluted Delta
+⚠️  NO RESULTS: Query parsed but no cards found
+
+Test 46: "white commander"
+Expected: white legendary creatures
+⚠️  NO RESULTS: Query parsed but no cards found
+
+Test 47: "green vanilla creature"
+Expected: green creatures with no abilities
+⚠️  NO RESULTS: Query parsed but no cards found
+
+Test 48: "red split card"
+Expected: red split cards
+⚠️  NO RESULTS: Query parsed but no cards found
+
+Test 49: "2 mana simic commander"
+Expected: Ezuri, Cephalid Constable

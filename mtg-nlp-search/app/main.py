@@ -21,7 +21,11 @@ app.add_middleware(
 )
 
 @app.get("/search")
-def search(prompt: str = Query(..., description="Describe the kind of card you're looking for.")):
+def search(
+    prompt: str = Query(..., description="Describe the kind of card you're looking for."),
+    page: int = Query(1, ge=1, description="Page number (starts at 1)"),
+    per_page: int = Query(20, ge=1, le=100, description="Results per page (1-100)")
+):
     try:
         # Try to extract filters using NLP
         filters = extract_filters(prompt)
@@ -32,19 +36,44 @@ def search(prompt: str = Query(..., description="Describe the kind of card you'r
             filters = {"raw_query": prompt}
             print(f"Using raw query: {prompt}")
         
-        # Search Scryfall
-        cards = search_scryfall(filters)
-        print(f"Found {len(cards)} cards")
+        # Search Scryfall with pagination
+        all_cards = search_scryfall(filters)
+        total_results = len(all_cards)
+        
+        # Calculate pagination
+        start_idx = (page - 1) * per_page
+        end_idx = start_idx + per_page
+        cards = all_cards[start_idx:end_idx]
+        
+        total_pages = (total_results + per_page - 1) // per_page  # Ceiling division
+        
+        print(f"Found {total_results} total cards, showing page {page}/{total_pages}")
         
         return {
             "prompt": prompt,
             "filters": filters,
-            "results": cards[:10]  # Limit to first 10 results
+            "results": cards,
+            "pagination": {
+                "page": page,
+                "per_page": per_page,
+                "total_results": total_results,
+                "total_pages": total_pages,
+                "has_next": page < total_pages,
+                "has_prev": page > 1
+            }
         }
     except Exception as e:
         print(f"Error in search endpoint: {e}")
         return {
             "prompt": prompt,
             "error": str(e),
-            "results": []
+            "results": [],
+            "pagination": {
+                "page": 1,
+                "per_page": per_page,
+                "total_results": 0,
+                "total_pages": 0,
+                "has_next": False,
+                "has_prev": False
+            }
         }
