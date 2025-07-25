@@ -4,7 +4,7 @@ import re
 # Magic: The Gathering vocabulary mappings
 GUILD_COLORS = {
     'azorius': 'WU', 'dimir': 'UB', 'rakdos': 'BR', 'gruul': 'RG', 'selesnya': 'GW',
-    'orzhov': 'WB', 'izzet': 'UR', 'golgari': 'BG', 'boros': 'RW', 'simic': 'UG'
+    'orzhov': 'WB', 'izzet': 'UR', 'golgari': 'BG', 'boros': 'RW', 'simic': 'GU'
 }
 
 SHARD_COLORS = {

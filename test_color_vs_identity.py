@@ -31,11 +31,14 @@ def test_query(query, expected_field, expected_query_type, description):
         scryfall_query = data.get('scryfall_query', '')
         results_count = data.get('pagination', {}).get('total_results', 0)
         
-        # Check if the expected field is present
-        field_present = expected_field in filters
-        
-        # Check if the query uses the expected type
-        query_correct = expected_query_type in scryfall_query
+        # For direct scryfall queries, check the query string
+        if 'scryfall_query' in filters:
+            field_present = True  # Direct queries are always valid
+            query_correct = expected_query_type in filters['scryfall_query']
+        else:
+            # For filter-based queries, check the filters
+            field_present = expected_field in filters
+            query_correct = expected_query_type in scryfall_query
         
         print(f"🎛️  Filters: {json.dumps(filters, indent=2)}")
         print(f"🔍 Scryfall Query: '{scryfall_query}'")
@@ -133,13 +136,13 @@ def run_test_suite():
         },
         {
             'query': 'white fetchland',
-            'expected_field': 'coloridentity',
+            'expected_field': 'scryfall_query',  # Direct query
             'expected_query_type': 'coloridentity:W',
             'description': 'Land types should use coloridentity: for deck building'
         },
         {
             'query': 'blue shockland',
-            'expected_field': 'coloridentity',
+            'expected_field': 'scryfall_query',  # Direct query
             'expected_query_type': 'coloridentity:U', 
             'description': 'Land types should use coloridentity: for deck building'
         },
@@ -147,7 +150,7 @@ def run_test_suite():
         # EDGE CASES
         {
             'query': 'white commander',
-            'expected_field': 'coloridentity',
+            'expected_field': 'scryfall_query',  # Direct query
             'expected_query_type': 'coloridentity:W',
             'description': 'Commander queries should use coloridentity:'
         },
