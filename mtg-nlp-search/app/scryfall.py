@@ -25,9 +25,13 @@ def build_query(filters: dict) -> str:
     if "type" in filters:
         parts.append(f"type:{filters['type']}")
     
-    # Color identity
+    # Color identity (regular - allows subset matching)
     if "coloridentity" in filters:
         parts.append(f"coloridentity:{filters['coloridentity']}")
+    
+    # Color identity exact (requires exact match)
+    if "coloridentity_exact" in filters:
+        parts.append(f"coloridentity={filters['coloridentity_exact']}")
     
     # Power and toughness
     if "power" in filters:

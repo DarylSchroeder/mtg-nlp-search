@@ -96,15 +96,23 @@ def extract_filters_fallback(prompt: str) -> dict:
     for land_type, scryfall_query in LAND_TYPES.items():
         if land_type in prompt_lower:
             # Check for color combinations with land types
-            color_identity = extract_color_identity(prompt_lower)
-            if color_identity:
-                return {'scryfall_query': f'{scryfall_query} coloridentity:{color_identity}'}
+            color_result = extract_color_identity(prompt_lower)
+            if color_result[0]:  # If color_identity is not None
+                color_identity, exact_match = color_result
+                if exact_match:
+                    return {'scryfall_query': f'{scryfall_query} coloridentity={color_identity}'}
+                else:
+                    return {'scryfall_query': f'{scryfall_query} coloridentity:{color_identity}'}
             return {'scryfall_query': scryfall_query}
     
     # Extract color identity
-    color_identity = extract_color_identity(prompt_lower)
-    if color_identity:
-        filters['coloridentity'] = color_identity
+    color_result = extract_color_identity(prompt_lower)
+    if color_result[0]:  # If color_identity is not None
+        color_identity, exact_match = color_result
+        if exact_match:
+            filters['coloridentity_exact'] = color_identity
+        else:
+            filters['coloridentity'] = color_identity
     
     # Extract common effects
     effects = []
@@ -149,28 +157,40 @@ def extract_filters_fallback(prompt: str) -> dict:
     
     return filters
 
-def extract_color_identity(prompt_lower: str) -> str:
-    """Extract color identity from guild names, shard names, commanders, etc."""
+def extract_color_identity(prompt_lower: str) -> tuple:
+    """Extract color identity from guild names, shard names, commanders, etc.
+    Returns (color_identity, exact_match) where exact_match is True for ':only' suffix"""
     
-    # Check guild names
+    exact_match = False
+    color_identity = None
+    
+    # Check guild names with :only suffix
     for guild, colors in GUILD_COLORS.items():
-        if guild in prompt_lower:
-            return colors
+        if f"{guild}:only" in prompt_lower:
+            return colors, True
+        elif guild in prompt_lower:
+            color_identity = colors
     
-    # Check shard names  
+    # Check shard names with :only suffix
     for shard, colors in SHARD_COLORS.items():
-        if shard in prompt_lower:
-            return colors
+        if f"{shard}:only" in prompt_lower:
+            return colors, True
+        elif shard in prompt_lower:
+            color_identity = colors
     
-    # Check wedge names
+    # Check wedge names with :only suffix
     for wedge, colors in WEDGE_COLORS.items():
-        if wedge in prompt_lower:
-            return colors
+        if f"{wedge}:only" in prompt_lower:
+            return colors, True
+        elif wedge in prompt_lower:
+            color_identity = colors
     
-    # Check commander names
+    # Check commander names with :only suffix
     for commander, colors in COMMANDERS.items():
-        if commander in prompt_lower:
-            return colors
+        if f"{commander}:only" in prompt_lower:
+            return colors, True
+        elif commander in prompt_lower:
+            color_identity = colors
     
     # Check individual colors
     color_map = {'white': 'W', 'blue': 'U', 'black': 'B', 'red': 'R', 'green': 'G'}
@@ -180,9 +200,9 @@ def extract_color_identity(prompt_lower: str) -> str:
             found_colors.append(color_code)
     
     if found_colors:
-        return ''.join(sorted(found_colors))
+        color_identity = ''.join(sorted(found_colors))
     
-    return None
+    return color_identity, exact_match
 
 def extract_filters(prompt: str) -> dict:
     """Main filter extraction function with OpenAI + fallback"""
