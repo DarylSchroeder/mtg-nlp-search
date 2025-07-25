@@ -3,26 +3,46 @@
 ## Overview
 Transform the MTG NLP Search FastAPI service into an Amazon Q Developer tool using Model Context Protocol (MCP).
 
-## Current Status: Step 1 ✅
+## Current Status: Step 1 ✅ → Step 2 🚧
 
 ---
 
-## 1. Finalize Your MVP FastAPI Service (Current Stage)
+## 1. Finalize Your MVP FastAPI Service ✅ COMPLETE
 - ✅ Validate /search endpoint and Swagger UI
-- 🔍 Add error handling and logging as needed
-- 🧹 Ensure your codebase is clean, modular, and testable
+- ✅ Add error handling and logging (graceful OpenAI fallback, Scryfall rate limiting)
+- ✅ Ensure your codebase is clean, modular, and testable
+- ✅ Implement proper Scryfall API compliance (headers, rate limiting)
+- ✅ Test natural language query parsing ("2 mana instant" → "cmc:2 type:instant")
+- ✅ Verify API returns structured JSON with relevant MTG cards
 
-## 2. Enhance the Service for Production Readiness
-- [ ] Add `python-dotenv` to load .env
-- [ ] Improve parsing resilience (handle GPT responses gracefully)
+## 2. Enhance the Service for Production Readiness (Current Stage)
+- ✅ Add `python-dotenv` to load .env
+- ✅ Improve parsing resilience (handle GPT responses gracefully)
 - [ ] Add caching if performance is required (Redis or simple LRU)
 - [ ] Add TCGPlayer price lookup (with affiliate links) for enrichment
 - [ ] Fix deprecated OpenAI API usage
 - [ ] Replace unsafe `eval()` with proper JSON parsing
-- [ ] Add input validation
+- [ ] Add input validation and request/response models
+- [ ] Add comprehensive test suite
+- [ ] Add deployment configuration (Docker, requirements.txt)
 
+## 🎯 Next Immediate Steps (Priority Order)
+
+### High Priority (Production Readiness)
+1. **Add comprehensive test suite** - Unit tests for query parsing, API endpoints
+2. **Add input validation** - Pydantic models for request/response validation  
+3. **Fix deprecated OpenAI API usage** - Update to latest OpenAI client patterns
+4. **Add deployment configuration** - Docker, proper requirements.txt, health checks
+
+### Medium Priority (Enhancement)
+5. **Add caching layer** - Redis or simple LRU for Scryfall responses
+6. **Add TCGPlayer price lookup** - Enrich card data with pricing information
+7. **Improve query parsing** - Handle more complex natural language patterns
+
+### Low Priority (MCP Integration)
+8. **Create MCP server wrapper** - Prepare for Amazon Q integration
+9. **Register with Amazon Q Developer** - Enable Q to use the tool
 ## 3. Create an MCP Server Wrapper
-Amazon Q uses Model Context Protocol (MCP) to interact with external tools. You'll need to wrap your search API inside an MCP-compatible server:
 
 - [ ] Define tools (e.g. `search_cards_nlp`) with JSON Schema inputs and outputs
 - [ ] Spin up an MCP server to expose your tool over HTTP or gRPC
