@@ -1,8 +1,24 @@
 from fastapi import FastAPI, Query
+from fastapi.middleware.cors import CORSMiddleware
 from app.nlp import extract_filters
 from app.scryfall import search_scryfall
 
 app = FastAPI(title="MTG NLP Search", description="Natural language search for Magic: The Gathering cards")
+
+# Add CORS middleware to allow frontend access
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "https://rofellods-nlp-mtg.onrender.com",
+        "https://www.rofellods.com", 
+        "http://localhost:8080",
+        "http://localhost:3000",
+        "http://127.0.0.1:8080"
+    ],
+    allow_credentials=True,
+    allow_methods=["GET", "POST"],
+    allow_headers=["*"],
+)
 
 @app.get("/search")
 def search(prompt: str = Query(..., description="Describe the kind of card you're looking for.")):
