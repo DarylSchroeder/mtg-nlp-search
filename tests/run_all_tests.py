@@ -62,10 +62,25 @@ def main():
     print("-" * 30)
     
     integration_tests = [
-        ("python integration/test_api.py", "API Integration")
+        ("python integration/test_api.py", "Local API Integration"),
+        ("python integration/test_deployed_api.py", "Deployed API Health"),
+        ("python integration/test_sample_queries.py", "Sample Query Validation")
     ]
     
     for cmd, desc in integration_tests:
+        tests_total += 1
+        if run_command(cmd, desc):
+            tests_passed += 1
+    
+    # 3. Legacy Tests (for compatibility)
+    print("\n🔄 LEGACY TESTS")
+    print("-" * 30)
+    
+    legacy_tests = [
+        ("python legacy/test_color_vs_identity.py", "Color vs Identity Logic")
+    ]
+    
+    for cmd, desc in legacy_tests:
         tests_total += 1
         if run_command(cmd, desc):
             tests_passed += 1
