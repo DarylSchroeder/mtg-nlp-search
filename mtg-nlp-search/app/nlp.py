@@ -108,10 +108,10 @@ def extract_filters_fallback(prompt: str) -> dict:
     # Extract common effects
     effects = []
     effect_patterns = {
-        'counter': ['counter', 'counterspell'],
+        'counter': ['counterspell', r'\bcounter\b(?!.*cannot be countered)(?!.*can\'t be countered)'],
         'draw': ['draw', 'card draw'],
         'removal': ['destroy', 'remove', 'removal'],
-        'ramp': ['ramp', 'search.*land', 'acceleration'],
+        'ramp': [r'\bramp\b', r'search.*land(?!.*mana)', 'acceleration', 'mana acceleration'],
         'token': ['token', 'create.*creature'],
         'damage': ['damage', 'deal.*damage'],
         'life': ['life', 'gain.*life'],
@@ -126,9 +126,22 @@ def extract_filters_fallback(prompt: str) -> dict:
     
     for effect, patterns in effect_patterns.items():
         for pattern in patterns:
-            if re.search(pattern, prompt_lower):
-                effects.append(effect)
-                break
+            # Special handling for counter effect to avoid "cannot be countered"
+            if effect == 'counter':
+                if pattern == 'counterspell' and 'counterspell' in prompt_lower:
+                    effects.append(effect)
+                    break
+                elif pattern.startswith(r'\bcounter\b'):
+                    # Check if "counter" appears but NOT in "cannot be countered" context
+                    if re.search(r'\bcounter\b', prompt_lower):
+                        # Exclude if it's in a "cannot be countered" context
+                        if not re.search(r'cannot be countered|can\'t be countered|this spell cannot be countered', prompt_lower):
+                            effects.append(effect)
+                            break
+            else:
+                if re.search(pattern, prompt_lower):
+                    effects.append(effect)
+                    break
     
     if effects:
         filters['effects'] = effects
