@@ -40,7 +40,7 @@ def build_query(filters: dict) -> str:
     
     # Color identity exact (requires exact match)
     if "coloridentity_exact" in filters:
-        parts.append(f"coloridentity={filters['coloridentity_exact']}")
+        parts.append(f"color={filters['coloridentity_exact']}")
     
     # Power and toughness
     if "power" in filters:

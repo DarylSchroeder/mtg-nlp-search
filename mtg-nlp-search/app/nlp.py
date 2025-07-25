@@ -190,34 +190,46 @@ def extract_color_identity(prompt_lower: str) -> tuple:
     
     exact_match = False
     color_identity = None
+    use_color_not_identity = False
+    
+    # Check if this is a card type query (should use actual colors, not color identity)
+    has_card_type = any(card_type in prompt_lower for card_type in ['artifact', 'creature', 'instant', 'sorcery', 'enchantment', 'planeswalker'])
     
     # Check guild names with :only suffix
     for guild, colors in GUILD_COLORS.items():
         if f"{guild}:only" in prompt_lower:
-            return colors, True
+            return colors, True, use_color_not_identity
         elif guild in prompt_lower:
             color_identity = colors
+            if has_card_type:
+                use_color_not_identity = True
     
     # Check shard names with :only suffix
     for shard, colors in SHARD_COLORS.items():
         if f"{shard}:only" in prompt_lower:
-            return colors, True
+            return colors, True, use_color_not_identity
         elif shard in prompt_lower:
             color_identity = colors
+            if has_card_type:
+                use_color_not_identity = True
     
     # Check wedge names with :only suffix
     for wedge, colors in WEDGE_COLORS.items():
         if f"{wedge}:only" in prompt_lower:
-            return colors, True
+            return colors, True, use_color_not_identity
         elif wedge in prompt_lower:
             color_identity = colors
+            if has_card_type:
+                use_color_not_identity = True
     
     # Check commander names with :only suffix
     for commander, colors in COMMANDERS.items():
         if f"{commander}:only" in prompt_lower:
-            return colors, True
+            return colors, True, use_color_not_identity
         elif commander in prompt_lower:
             color_identity = colors
+            # Commander queries should use coloridentity, not color
+            use_color_not_identity = False
     
     # Check individual colors
     color_map = {'white': 'W', 'blue': 'U', 'black': 'B', 'red': 'R', 'green': 'G'}
@@ -227,16 +239,12 @@ def extract_color_identity(prompt_lower: str) -> tuple:
             found_colors.append(color_code)
     
     if found_colors:
-        # For artifacts and most card types, use actual color, not color identity
-        # Color identity is mainly for Commander deck building
-        if any(card_type in prompt_lower for card_type in ['artifact', 'creature', 'instant', 'sorcery', 'enchantment', 'planeswalker']):
-            color_identity = ''.join(sorted(found_colors))
-            # Use 'colors' field instead of 'coloridentity' for actual card colors
-            return color_identity, False, True  # Return (colors, exact_match, use_color_not_identity)
-        else:
-            color_identity = ''.join(sorted(found_colors))
+        color_identity = ''.join(sorted(found_colors))
+        # For card type queries, use actual color, not color identity
+        if has_card_type:
+            use_color_not_identity = True
     
-    return color_identity, exact_match, False
+    return color_identity, exact_match, use_color_not_identity
 
 def extract_filters(prompt: str) -> dict:
     """Main filter extraction function with OpenAI + fallback"""
