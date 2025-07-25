@@ -39,7 +39,9 @@ def search(
             print(f"Using raw query: {prompt}")
         
         # Search Scryfall with pagination
-        all_cards = search_scryfall(filters)
+        search_result = search_scryfall(filters)
+        all_cards = search_result["cards"]
+        scryfall_query = search_result["query"]
         total_results = len(all_cards)
         
         # Calculate pagination
@@ -54,6 +56,7 @@ def search(
         return {
             "prompt": prompt,
             "filters": filters,
+            "scryfall_query": scryfall_query,  # Include the actual Scryfall query
             "results": cards,
             "pagination": {
                 "page": page,

@@ -231,18 +231,18 @@ def search_scryfall(filters: dict):
             data = response.json()
             cards = data.get("data", [])
             print(f"Found {len(cards)} cards")  # Debug output
-            return cards
+            return {"cards": cards, "query": query}
         elif response.status_code == 404:
             # No cards found
             print(f"No results for query: {query}")
-            return []
+            return {"cards": [], "query": query}
         else:
             print(f"Scryfall API error: {response.status_code} - {response.text}")
-            return []
+            return {"cards": [], "query": query}
             
     except requests.exceptions.RequestException as e:
         print(f"Request error: {e}")
-        return []
+        return {"cards": [], "query": query}
     except Exception as e:
         print(f"Unexpected error: {e}")
-        return []
+        return {"cards": [], "query": query}
