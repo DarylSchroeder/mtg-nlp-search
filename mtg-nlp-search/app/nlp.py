@@ -37,7 +37,9 @@ CARD_TYPES = {
     'double-faced card': 'is:dfc',
     'modal double-faced card': 'is:mdfc',
     'split card': 'is:split',
-    'transform card': 'is:transform'
+    'transform card': 'is:transform',
+    'spell': 'is:spell',
+    'permanent': 'is:permanent'
 }
 
 # Famous commanders and their color identities
@@ -154,6 +156,7 @@ def extract_filters_fallback(prompt: str) -> dict:
             filters['type'] = found_types[0]
     
     # Handle special card type vernacular
+    spell_or_permanent_query = None
     for vernacular, scryfall_query in CARD_TYPES.items():
         if vernacular in prompt_lower:
             # For commander queries, check for color combinations
@@ -163,7 +166,12 @@ def extract_filters_fallback(prompt: str) -> dict:
                     color_identity, is_commander_context = color_result[0], color_result[1]
                     # Commander queries always use coloridentity
                     return {'scryfall_query': f'{scryfall_query} coloridentity:{color_identity}'}
-            return {'scryfall_query': scryfall_query}
+                return {'scryfall_query': scryfall_query}
+            # For spell and permanent, store the query but continue processing for effects
+            elif vernacular in ['spell', 'permanent']:
+                spell_or_permanent_query = scryfall_query
+            else:
+                return {'scryfall_query': scryfall_query}
     
     # Handle land vernacular
     for land_type, scryfall_query in LAND_TYPES.items():
@@ -195,6 +203,24 @@ def extract_filters_fallback(prompt: str) -> dict:
         else:
             # Everything else uses color
             filters['colors'] = color_identity
+    
+    # Extract format information
+    format_patterns = {
+        'standard': [r'\bstandard\b', r'format:standard'],
+        'commander': [r'\bcommander\b', r'\bedh\b', r'format:commander'],
+        'modern': [r'\bmodern\b', r'format:modern'],
+        'pioneer': [r'\bpioneer\b', r'format:pioneer'],
+        'legacy': [r'\blegacy\b', r'format:legacy'],
+        'pauper': [r'\bpauper\b', r'format:pauper']
+    }
+    
+    for format_name, patterns in format_patterns.items():
+        for pattern in patterns:
+            if re.search(pattern, prompt_lower):
+                filters['format'] = format_name
+                break
+        if 'format' in filters:
+            break
     
     # Extract common effects
     effects = []
@@ -236,6 +262,16 @@ def extract_filters_fallback(prompt: str) -> dict:
     
     if effects:
         filters['effects'] = effects
+    
+    # Handle spell/permanent queries with effects
+    if spell_or_permanent_query and effects:
+        # Combine spell/permanent query with effect queries
+        effect_queries = [f'effect[{effect}]' for effect in effects]
+        combined_query = f'{spell_or_permanent_query} {" ".join(effect_queries)}'
+        filters['scryfall_query'] = combined_query
+    elif spell_or_permanent_query:
+        # Just spell/permanent without effects
+        filters['scryfall_query'] = spell_or_permanent_query
     
     return filters
 
