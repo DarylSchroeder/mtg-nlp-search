@@ -71,9 +71,9 @@ def test_color_vs_identity_logic():
         ("red instant 2 cmc", {"cmc": 2, "type": "instant", "colors": "R"}),
         ("green sorcery", {"type": "sorcery", "colors": "G"}),
         ("black enchantment", {"type": "enchantment", "colors": "B"}),
-        ("rakdos removal", {"colors": "BR"}),
-        ("selesnya enchantment", {"type": "enchantment", "colors": "GW"}),
-        ("azorius counterspell", {"colors": "WU"})
+        ("rakdos removal", {"coloridentity": "BR"}),  # Guild names use coloridentity
+        ("selesnya enchantment", {"type": "enchantment", "coloridentity": "GW"}),  # Guild names use coloridentity
+        ("azorius counterspell", {"coloridentity": "WU"})  # Guild names use coloridentity
     ]
     
     for query, expected_filters in color_cases:
@@ -83,15 +83,20 @@ def test_color_vs_identity_logic():
             actual_value = result.get(key)
             assert actual_value == expected_value, f"'{query}' - {key}: expected {expected_value}, got {actual_value}"
         
-        # Should use 'colors', not 'coloridentity'
-        assert 'colors' in result, f"'{query}' should have 'colors' field"
-        assert 'coloridentity' not in result, f"'{query}' should not have 'coloridentity' field"
+        # Check if this is a guild name (should use coloridentity) or individual color (should use colors)
+        guild_names = ['rakdos', 'selesnya', 'azorius', 'dimir', 'gruul', 'orzhov', 'izzet', 'golgari', 'boros', 'simic']
+        is_guild_query = any(guild in query.lower() for guild in guild_names)
         
-        scryfall_query = result.get("scryfall_query", "")
-        if scryfall_query:
-            assert "coloridentity:" not in scryfall_query, f"'{query}' should use color:, not coloridentity:"
+        if is_guild_query:
+            # Guild names should use coloridentity
+            assert 'coloridentity' in result, f"'{query}' should have 'coloridentity' field (guild name)"
+            assert 'colors' not in result, f"'{query}' should not have 'colors' field (guild name)"
+        else:
+            # Individual colors should use colors
+            assert 'colors' in result, f"'{query}' should have 'colors' field (individual color)"
+            assert 'coloridentity' not in result, f"'{query}' should not have 'coloridentity' field (individual color)"
             
-        print(f"✅ PASS: '{query}' uses colors correctly")
+        print(f"✅ PASS: '{query}' uses {'coloridentity' if is_guild_query else 'colors'} correctly")
     
     # Commander contexts should use 'coloridentity'
     commander_cases = [

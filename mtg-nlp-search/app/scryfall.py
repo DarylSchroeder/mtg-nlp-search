@@ -9,24 +9,21 @@ def build_query(filters: dict) -> str:
     # Always include game:paper filter for physical cards only
     base_parts = ["game:paper"]
     
-    # If we have a direct scryfall query, combine it with game:paper
-    if "scryfall_query" in filters:
-        return f"game:paper ({filters['scryfall_query']})"
-    
-    # If we have a raw query, try to parse it better and add game:paper
-    if "raw_query" in filters:
-        raw_parsed = parse_raw_query(filters["raw_query"])
-        return f"game:paper ({raw_parsed})"
-    
     # Build query from structured filters
     parts = base_parts.copy()
+    
+    # If we have a direct scryfall query, use it as base but still add other filters
+    scryfall_query = ""
+    if "scryfall_query" in filters:
+        scryfall_query = filters['scryfall_query']
+        parts.append(f"({scryfall_query})")
     
     # Mana cost
     if "cmc" in filters:
         parts.append(f"cmc:{filters['cmc']}")
     
-    # Card type
-    if "type" in filters:
+    # Card type (only add if not already in scryfall_query)
+    if "type" in filters and "scryfall_query" not in filters:
         type_value = filters['type']
         # If multiple types, wrap in quotes for Scryfall
         if ' ' in type_value:
@@ -34,12 +31,12 @@ def build_query(filters: dict) -> str:
         else:
             parts.append(f"type:{type_value}")
     
-    # Card colors (actual colors, not color identity)
-    if "colors" in filters:
+    # Colors (actual card colors - uses color:) - avoid duplication
+    if "colors" in filters and f"color:{filters['colors']}" not in scryfall_query:
         parts.append(f"color:{filters['colors']}")
     
-    # Color identity (regular - allows subset matching)
-    if "coloridentity" in filters:
+    # Color identity (regular - allows subset matching) - avoid duplication
+    if "coloridentity" in filters and f"coloridentity:{filters['coloridentity']}" not in scryfall_query:
         parts.append(f"coloridentity:{filters['coloridentity']}")
     
     # Color identity exact (requires exact match)
@@ -62,6 +59,11 @@ def build_query(filters: dict) -> str:
             effect_query = build_effect_query(effect)
             if effect_query:
                 parts.append(effect_query)
+    
+    # If we have a raw query and no scryfall_query, try to parse it better
+    if "raw_query" in filters and "scryfall_query" not in filters:
+        raw_parsed = parse_raw_query(filters["raw_query"])
+        parts.append(f"({raw_parsed})")
     
     # If no additional parts, return just the base filter
     if len(parts) == 1:  # Only has game:paper

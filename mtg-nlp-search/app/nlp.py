@@ -184,12 +184,8 @@ def extract_filters_fallback(prompt: str) -> dict:
             
             if color_result[0]:  # If color_identity is not None
                 color_identity, is_commander_context = color_result[0], color_result[1]
-                if is_commander_context:
-                    # Commander context uses coloridentity
-                    return {'type': 'land', 'coloridentity': color_identity, 'scryfall_query': f'{scryfall_query} coloridentity:{color_identity}'}
-                else:
-                    # Land types with guild names use color
-                    return {'type': 'land', 'colors': color_identity, 'scryfall_query': f'{scryfall_query} color:{color_identity}'}
+                # Land types always use coloridentity for deck building context
+                return {'type': 'land', 'coloridentity': color_identity, 'scryfall_query': f'{scryfall_query} coloridentity:{color_identity}'}
             return {'type': 'land', 'scryfall_query': scryfall_query}
     
     # Extract color identity
@@ -285,24 +281,27 @@ def extract_color_identity(prompt_lower: str) -> tuple:
     color_identity = None
     is_commander_context = False
     
-    # Check guild names - always use color
+    # Check guild names - use coloridentity for deck building context
     for guild, colors in GUILD_COLORS.items():
         if guild in prompt_lower:
             color_identity = colors
+            is_commander_context = True  # Guild names imply deck building context
             break
     
-    # Check shard names - always use color
+    # Check shard names - use coloridentity for deck building context
     if not color_identity:
         for shard, colors in SHARD_COLORS.items():
             if shard in prompt_lower:
                 color_identity = colors
+                is_commander_context = True  # Shard names imply deck building context
                 break
     
-    # Check wedge names - always use color
+    # Check wedge names - use coloridentity for deck building context
     if not color_identity:
         for wedge, colors in WEDGE_COLORS.items():
             if wedge in prompt_lower:
                 color_identity = colors
+                is_commander_context = True  # Wedge names imply deck building context
                 break
     
     # Check commander names using dynamic database - use coloridentity
