@@ -6,16 +6,20 @@ import re
 def build_query(filters: dict) -> str:
     """Build Scryfall query from extracted filters"""
     
-    # If we have a direct scryfall query, use it
-    if "scryfall_query" in filters:
-        return filters["scryfall_query"]
+    # Always include game:paper filter for physical cards only
+    base_parts = ["game:paper"]
     
-    # If we have a raw query, try to parse it better
+    # If we have a direct scryfall query, combine it with game:paper
+    if "scryfall_query" in filters:
+        return f"game:paper ({filters['scryfall_query']})"
+    
+    # If we have a raw query, try to parse it better and add game:paper
     if "raw_query" in filters:
-        return parse_raw_query(filters["raw_query"])
+        raw_parsed = parse_raw_query(filters["raw_query"])
+        return f"game:paper ({raw_parsed})"
     
     # Build query from structured filters
-    parts = []
+    parts = base_parts.copy()
     
     # Mana cost
     if "cmc" in filters:
@@ -55,9 +59,9 @@ def build_query(filters: dict) -> str:
             if effect_query:
                 parts.append(effect_query)
     
-    # If no parts, return a basic search
-    if not parts:
-        return "type:creature"  # Default fallback
+    # If no additional parts, return just the base filter
+    if len(parts) == 1:  # Only has game:paper
+        return "game:paper type:creature"  # Default fallback with game:paper
     
     return " ".join(parts)
 
