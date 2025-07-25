@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Query
+from fastapi import FastAPI, Query, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from app.nlp import extract_filters
 from app.scryfall import search_scryfall
@@ -189,19 +189,44 @@ def search(
         }
     except Exception as e:
         print(f"Error in search endpoint: {e}")
-        return {
-            "prompt": prompt,
-            "error": str(e),
-            "results": [],
-            "pagination": {
-                "page": 1,
-                "per_page": per_page,
-                "total_results": 0,
-                "total_pages": 0,
-                "has_next": False,
-                "has_prev": False
+        error_str = str(e).lower()
+        
+        # Detect cold start / server warmup issues
+        if ("timeout" in error_str or 
+            "connection" in error_str or 
+            "failed to establish" in error_str or
+            "service unavailable" in error_str):
+            raise HTTPException(
+                status_code=503,  # Service Unavailable
+                detail={
+                    "error": "Server is warming up, please try again in a moment",
+                    "error_type": "cold_start",
+                    "retry_after": 10,
+                    "prompt": prompt
+                }
+            )
+        
+        # Check if commanders are still loading
+        if not commander_db.loaded:
+            raise HTTPException(
+                status_code=503,  # Service Unavailable
+                detail={
+                    "error": "Server is still loading data, please try again in a moment",
+                    "error_type": "loading",
+                    "retry_after": 5,
+                    "prompt": prompt
+                }
+            )
+        
+        # General server errors
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error": str(e),
+                "error_type": "server_error",
+                "prompt": prompt
             }
-        }
+        )
 
 @app.post("/analyze-deck")
 def analyze_deck(card_names: List[str]):
@@ -216,11 +241,13 @@ def analyze_deck(card_names: List[str]):
         }
     except Exception as e:
         print(f"Error in deck analysis: {e}")
-        return {
-            "success": False,
-            "error": str(e),
-            "analysis": None
-        }
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error": str(e),
+                "error_type": "deck_analysis_error"
+            }
+        )
 
 @app.get("/samples")
 def get_sample_queries():
@@ -263,6 +290,9 @@ def health_check():
     
     uptime_formatted = f"{uptime_hours}h {uptime_minutes}m {uptime_secs}s"
     
+    # Detect if server is in cold start phase (first 60 seconds)
+    is_cold_start = uptime_seconds < 60
+    
     return {
         "status": "healthy",
         "timestamp": current_time.isoformat() + "Z",
@@ -278,8 +308,10 @@ def health_check():
         },
         "services": {
             "commanders_loaded": commander_db.loaded,
-            "commander_count": len(commander_db.commanders) if commander_db.loaded else 0
+            "commander_count": len(commander_db.commanders) if commander_db.loaded else 0,
+            "ready_for_search": commander_db.loaded and not is_cold_start
         },
+        "cold_start": is_cold_start,
         "version": "1.0.0"  # You can update this manually or read from a version file
     }
 
