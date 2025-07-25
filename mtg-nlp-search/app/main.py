@@ -3,7 +3,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.nlp import extract_filters
 from app.scryfall import search_scryfall
 from app.deck_analyzer import DeckAnalyzer
+from app.commanders import commander_db
 from typing import List
+import asyncio
 
 app = FastAPI(title="MTG NLP Search", description="Natural language search for Magic: The Gathering cards")
 
@@ -21,6 +23,46 @@ app.add_middleware(
     allow_methods=["GET", "POST"],
     allow_headers=["*"],
 )
+
+@app.on_event("startup")
+async def startup_event():
+    """Load commander database at server startup"""
+    # Run in background to not block startup
+    asyncio.create_task(load_commanders_background())
+
+async def load_commanders_background():
+    """Background task to load commanders with timeout and fallback"""
+    try:
+        import asyncio
+        
+        async def load_with_timeout():
+            loop = asyncio.get_event_loop()
+            return await loop.run_in_executor(None, commander_db.load_commanders_at_startup)
+        
+        # 30 second timeout for the entire loading process
+        try:
+            success = await asyncio.wait_for(load_with_timeout(), timeout=30.0)
+            
+            if success:
+                print("🎉 Commander database loaded successfully in background")
+            else:
+                print("⚠️  Commander database loaded with fallback")
+                
+        except asyncio.TimeoutError:
+            print("⏰ Commander loading timed out after 30s, using fallback")
+            commander_db._load_fallback_commanders()
+            
+    except Exception as e:
+        print(f"❌ Commander loading failed: {e}")
+        commander_db._load_fallback_commanders()
+
+@app.get("/")
+def read_root():
+    return {
+        "message": "MTG NLP Search API", 
+        "commanders_loaded": commander_db.loaded,
+        "commander_count": len(commander_db.commanders) if commander_db.loaded else 0
+    }
 
 @app.get("/search")
 def search(
@@ -100,4 +142,82 @@ def analyze_deck(card_names: List[str]):
             "success": False,
             "error": str(e),
             "analysis": None
+        }
+
+@app.get("/samples")
+def get_sample_queries():
+    """Return basic example queries for API documentation and testing"""
+    return {
+        "basic_examples": [
+            "1 mana counterspell",
+            "2 cmc rakdos instant", 
+            "fetchland",
+            "4 cost red creature"
+        ],
+        "guild_examples": [
+            "boros instant",
+            "dimir sorcery",
+            "selesnya enchantment"
+        ],
+        "commander_examples": [
+            "counterspell for my Chulane deck",
+            "removal for Atraxa",
+            "ramp for my Korvold deck"
+        ],
+        "land_examples": [
+            "shockland",
+            "triome",
+            "fetchland"
+        ],
+        "note": "These are basic examples for API testing. Frontend should manage its own sample queries with UI-specific metadata."
+    }
+
+@app.get("/commanders")
+def get_commanders(search: str = Query(None, description="Search commander names")):
+    """Get commander information"""
+    if not commander_db.loaded:
+        return {
+            "loaded": False,
+            "message": "Commander database still loading, please try again in a moment"
+        }
+    
+    if search:
+        # Search for specific commanders
+        results = commander_db.search_commanders(search, limit=20)
+        return {
+            "loaded": True,
+            "query": search,
+            "results": results,
+            "total_commanders": len(commander_db.commanders)
+        }
+    else:
+        # Return summary info
+        return {
+            "loaded": True,
+            "total_commanders": len(commander_db.commanders),
+            "sample_commanders": list(commander_db.commanders.keys())[:20],
+            "message": "Use ?search=name to search for specific commanders"
+        }
+
+@app.get("/commanders/{commander_name}")
+def get_commander_info(commander_name: str):
+    """Get detailed info for a specific commander"""
+    if not commander_db.loaded:
+        return {"error": "Commander database still loading"}
+    
+    colors = commander_db.get_commander_colors(commander_name)
+    info = commander_db.get_commander_info(commander_name)
+    
+    if colors:
+        return {
+            "name": commander_name,
+            "color_identity": colors,
+            "found": True,
+            "card_info": info
+        }
+    else:
+        return {
+            "name": commander_name,
+            "found": False,
+            "suggestions": commander_db.search_commanders(commander_name, limit=5)
         }

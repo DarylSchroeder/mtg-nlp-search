@@ -45,9 +45,16 @@ COMMANDERS = {
     'alesha': 'RWB', 
     'kenrith': 'WUBRG',
     'atraxa': 'WUBG',
+    'korvold': 'BRG',  # Added missing commander
+    'muldrotha': 'UBG',
+    'edgar markov': 'RWB',
+    'the ur-dragon': 'WUBRG',
     'meren': 'BG',
     'krenko': 'R',
-    'sisay': 'WG'
+    'sisay': 'WG',
+    'golos': 'WUBRG',
+    'jodah': 'WUBRG',
+    'sliver overlord': 'WUBRG'
 }
 
 def extract_filters_fallback(prompt: str) -> dict:
@@ -222,14 +229,48 @@ def extract_color_identity(prompt_lower: str) -> tuple:
             if has_card_type:
                 use_color_not_identity = True
     
-    # Check commander names with :only suffix
-    for commander, colors in COMMANDERS.items():
-        if f"{commander}:only" in prompt_lower:
-            return colors, True, use_color_not_identity
-        elif commander in prompt_lower:
-            color_identity = colors
-            # Commander queries should use coloridentity, not color
-            use_color_not_identity = False
+    # Check commander names using dynamic database
+    from app.commanders import commander_db
+    
+    if commander_db.loaded:
+        # Try to extract commander name from common patterns
+        import re
+        commander_patterns = [
+            r'for my (\w+(?:\s+\w+)*) deck',
+            r'in (\w+(?:\s+\w+)*) colors',
+            r'(\w+(?:\s+\w+)*) commander',
+            r'for (\w+(?:\s+\w+)*)',
+        ]
+        
+        for pattern in commander_patterns:
+            matches = re.findall(pattern, prompt_lower)
+            for match in matches:
+                commander_colors = commander_db.get_commander_colors(match.strip())
+                if commander_colors:
+                    # Check for :only suffix
+                    if f"{match}:only" in prompt_lower:
+                        return commander_colors, True, False
+                    else:
+                        color_identity = commander_colors
+                        use_color_not_identity = False
+                        break
+        
+        # Also check direct commander name mentions
+        for commander_name in commander_db.commanders.keys():
+            if f"{commander_name}:only" in prompt_lower:
+                return commander_db.commanders[commander_name], True, False
+            elif commander_name in prompt_lower:
+                color_identity = commander_db.commanders[commander_name]
+                use_color_not_identity = False
+    else:
+        # Fallback to hardcoded commanders if database not loaded
+        for commander, colors in COMMANDERS.items():
+            if f"{commander}:only" in prompt_lower:
+                return colors, True, use_color_not_identity
+            elif commander in prompt_lower:
+                color_identity = colors
+                # Commander queries should use coloridentity, not color
+                use_color_not_identity = False
     
     # Check individual colors
     color_map = {'white': 'W', 'blue': 'U', 'black': 'B', 'red': 'R', 'green': 'G'}

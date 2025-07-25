@@ -19,6 +19,12 @@ A complete natural language search system for Magic: The Gathering cards with bo
 - **Format Awareness**: Tailored suggestions for Commander, Standard, and other formats
 - **Comprehensive Reports**: Detailed analysis with improvement reasons and statistics
 
+### ⚡ **Server Warm-up Indicator** (NEW!)
+- **Cold Start Detection**: Automatically detects when serverless deployment is warming up
+- **User-Friendly Messaging**: Shows "Server warming up..." after 5 seconds of waiting
+- **Seamless Integration**: Works with any frontend implementation
+- **No Configuration**: Automatically handles Render.com and similar serverless platforms
+
 ## Quick Start
 
 1. **Install dependencies:**
