@@ -178,6 +178,7 @@ def search(
             "filters": filters,
             "scryfall_query": scryfall_query,  # Include the actual Scryfall query
             "results": cards,
+            "debug_prompt_lower": prompt.lower().strip(),  # Add debug info
             "pagination": {
                 "page": page,
                 "per_page": per_page,
