@@ -340,10 +340,12 @@ class QueryBuilder:
         # Store the appropriate field
         if color_identity:
             if is_commander_context:
+                # Commander context detected - use coloridentity for deck building constraints
                 self.state.filters['coloridentity'] = color_identity
                 self.state.filters['is_commander_context'] = True
             else:
-                self.state.filters['coloridentity'] = color_identity
+                # Guild names, individual colors - use exact color matching
+                self.state.filters['colors'] = color_identity
                 self.state.filters['is_commander_context'] = False
     
     def _extract_types(self):
@@ -393,6 +395,7 @@ class QueryBuilder:
                         commander_colors = commander_db.get_commander_colors(commander_name)
                         if commander_colors:
                             self.state.filters['coloridentity'] = commander_colors
+                            self.state.filters['is_commander_context'] = True  # Commander detection always means commander context
                             print(f"🔧 Found commander (DB): {commander_name} -> {commander_colors}")
                             return
                 except ImportError:

@@ -171,17 +171,25 @@ def search(
         filters = extract_filters(prompt)
         print(f"API: Extracted filters: {filters}")
         
-        # If commander colors are explicitly provided, override any color/coloridentity
+        # If commander colors are explicitly provided, override with COLORIDENTITY constraint
         if commander_colors:
+            # Remove any existing color/coloridentity filters
+            filters.pop('colors', None)
+            filters.pop('coloridentity', None)
+            # Set explicit commander constraint
             filters['coloridentity'] = commander_colors
             filters['is_commander_context'] = True
-            print(f"API: Applied commander colors: {commander_colors}")
+            print(f"API: Applied explicit commander constraint: COLORIDENTITY={commander_colors}")
         
         # If OpenAI failed, create a basic filter from the prompt
         if not filters or (len(filters) == 1 and "raw_query" in filters):
             filters = {"raw_query": prompt}
             # Still apply commander colors if provided
             if commander_colors:
+                # Remove any existing color/coloridentity filters
+                filters.pop('colors', None)
+                filters.pop('coloridentity', None)
+                # Set explicit commander constraint
                 filters['coloridentity'] = commander_colors
                 filters['is_commander_context'] = True
             print(f"API: Using raw query: {prompt}")

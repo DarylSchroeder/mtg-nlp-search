@@ -50,13 +50,12 @@ def build_query(filters: dict) -> str:
         parts.append(f"COLOR={filters['colors']}")  # Fixed: was color:, now COLOR=
     
     # Color identity - distinguish between guild names (exact) and commander context (identity)
-    if "coloridentity" in filters and f"COLOR={filters['coloridentity']}" not in scryfall_query and f"COLOR<={filters['coloridentity']}" not in scryfall_query:
-        # For guild names like "azorius" (WU), we want exactly those colors: COLOR=WU
-        # For commander context like "removal for Atraxa", we want color identity: COLOR<=WUBG
-        # Default to exact match for guild names, query_builder should specify if it's commander context
+    if "coloridentity" in filters and f"COLOR={filters['coloridentity']}" not in scryfall_query and f"COLOR<={filters['coloridentity']}" not in scryfall_query and f"COLORIDENTITY={filters['coloridentity']}" not in scryfall_query:
         if filters.get('is_commander_context', False):
-            parts.append(f"COLOR<={filters['coloridentity']}")  # Commander context: color identity constraint
+            # Commander context: use COLORIDENTITY= for explicit commander constraints
+            parts.append(f"COLORIDENTITY={filters['coloridentity']}")  # Commander color identity constraint
         else:
+            # Guild names detected in text: use COLOR= for exact color matching
             parts.append(f"COLOR={filters['coloridentity']}")   # Guild names: exactly those colors
     
     # Color identity exact (requires exact match) - DEPRECATED, use coloridentity instead
