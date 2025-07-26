@@ -15,6 +15,11 @@ WEDGE_COLORS = {
     'abzan': 'WBG', 'jeskai': 'URW', 'sultai': 'UBG', 'mardu': 'RWB', 'temur': 'GUR'
 }
 
+# Individual color mappings
+COLOR_MAP = {
+    'white': 'W', 'blue': 'U', 'black': 'B', 'red': 'R', 'green': 'G'
+}
+
 LAND_TYPES = {
     'shockland': 'is:shockland',
     'fetchland': 'is:fetchland', 
@@ -62,6 +67,7 @@ COMMANDERS = {
 
 def extract_filters_fallback(prompt: str) -> dict:
     """Fallback parser when OpenAI fails or isn't available"""
+    import re  # Import at function level
     prompt_lower = prompt.lower()
     filters = {}
     
