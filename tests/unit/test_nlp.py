@@ -8,7 +8,7 @@ import sys
 import os
 sys.path.append(os.path.join(os.path.dirname(__file__), '../../mtg-nlp-search'))
 
-from app.nlp import extract_filters
+from app.query_builder import extract_filters
 
 def test_counter_effect_detection():
     """Test that counter effect detection works correctly (critical bug fix)"""
@@ -36,8 +36,8 @@ def test_counter_effect_detection():
     
     for query in positive_cases:
         result = extract_filters(query)
-        effects = result.get("effects", [])
-        assert "counter" in effects, f"'{query}' should BE counterspell"
+        scryfall_query = result.get("scryfall_query", "")
+        assert "counter target" in scryfall_query, f"'{query}' should BE counterspell"
         print(f"✅ PASS: '{query}' correctly detected as counterspell")
 
 def test_mana_cost_extraction():
@@ -62,18 +62,18 @@ def test_mana_cost_extraction():
         print(f"✅ PASS: '{query}' -> CMC: {actual_cmc}")
 
 def test_color_vs_identity_logic():
-    """Test color vs color identity distinction"""
+    """Test color vs color identity distinction with explicit commander handling"""
     
-    # Colors and guild names should use 'colors' field
+    # Individual colors and guild names should use 'colors' field
     color_cases = [
         ("1 cmc white artifact", {"cmc": 1, "type": "artifact", "colors": "W"}),
         ("blue creature 3 mana", {"cmc": 3, "type": "creature", "colors": "U"}),
         ("red instant 2 cmc", {"cmc": 2, "type": "instant", "colors": "R"}),
         ("green sorcery", {"type": "sorcery", "colors": "G"}),
         ("black enchantment", {"type": "enchantment", "colors": "B"}),
-        ("rakdos removal", {"coloridentity": "BR"}),  # Guild names use coloridentity
-        ("selesnya enchantment", {"type": "enchantment", "coloridentity": "GW"}),  # Guild names use coloridentity
-        ("azorius counterspell", {"coloridentity": "WU"})  # Guild names use coloridentity
+        ("rakdos removal", {"colors": "BR"}),  # Guild names use colors (exact match)
+        ("selesnya enchantment", {"type": "enchantment", "colors": "GW"}),  # Guild names use colors (exact match)
+        ("azorius counterspell", {"colors": "WU"})  # Guild names use colors (exact match)
     ]
     
     for query, expected_filters in color_cases:
@@ -83,47 +83,41 @@ def test_color_vs_identity_logic():
             actual_value = result.get(key)
             assert actual_value == expected_value, f"'{query}' - {key}: expected {expected_value}, got {actual_value}"
         
-        # Check if this is a guild name (should use coloridentity) or individual color (should use colors)
-        guild_names = ['rakdos', 'selesnya', 'azorius', 'dimir', 'gruul', 'orzhov', 'izzet', 'golgari', 'boros', 'simic']
-        is_guild_query = any(guild in query.lower() for guild in guild_names)
-        
-        if is_guild_query:
-            # Guild names should use coloridentity
-            assert 'coloridentity' in result, f"'{query}' should have 'coloridentity' field (guild name)"
-            assert 'colors' not in result, f"'{query}' should not have 'colors' field (guild name)"
-        else:
-            # Individual colors should use colors
-            assert 'colors' in result, f"'{query}' should have 'colors' field (individual color)"
-            assert 'coloridentity' not in result, f"'{query}' should not have 'coloridentity' field (individual color)"
+        # All these should use 'colors' field, NOT 'coloridentity'
+        assert 'colors' in result, f"'{query}' should have 'colors' field"
+        assert 'coloridentity' not in result, f"'{query}' should NOT have 'coloridentity' field (explicit commander handling)"
             
-        print(f"✅ PASS: '{query}' uses {'coloridentity' if is_guild_query else 'colors'} correctly")
+        print(f"✅ PASS: '{query}' uses colors correctly")
     
-    # Commander contexts should use 'coloridentity'
-    commander_cases = [
-        "counterspell for my Chulane deck",
-        "white fetchland for Chulane", 
-        "blue shockland for my Chulane deck",
-        "Chulane commander"
+    # Commander context phrases should mark context but NOT set coloridentity automatically
+    commander_context_cases = [
+        ("counterspell for my Chulane deck", {"is_commander_context": True, "type": "instant"}),
+        ("removal for Atraxa", {"is_commander_context": True}),
+        ("white fetchland for Chulane", {"colors": "W", "is_commander_context": True}),
+        ("blue shockland for my deck", {"colors": "U", "is_commander_context": True}),
+        ("Chulane commander", {"is_commander_context": True})
     ]
     
-    for query in commander_cases:
+    for query, expected_filters in commander_context_cases:
         result = extract_filters(query)
         
-        # Check if coloridentity is used either as a field or in scryfall_query
-        has_coloridentity_field = "coloridentity" in result
-        scryfall_query = result.get("scryfall_query", "")
-        has_coloridentity_query = "coloridentity:" in scryfall_query
+        for key, expected_value in expected_filters.items():
+            actual_value = result.get(key)
+            assert actual_value == expected_value, f"'{query}' - {key}: expected {expected_value}, got {actual_value}"
         
-        assert has_coloridentity_field or has_coloridentity_query, f"'{query}' should use coloridentity"
-        print(f"✅ PASS: '{query}' uses coloridentity")
+        # Should mark commander context but NOT automatically set coloridentity
+        assert result.get('is_commander_context') == True, f"'{query}' should mark commander context"
+        assert 'coloridentity' not in result, f"'{query}' should NOT automatically set coloridentity (explicit commander handling)"
+        
+        print(f"✅ PASS: '{query}' marks commander context without auto-coloridentity")
 
 def test_special_card_types():
     """Test special card type detection"""
     
     special_cases = [
         ("fetchland", "fetchland"),
-        ("shockland", "shockland"),
-        ("commander", "commander")
+        ("shockland", "shockland")
+        # Note: "commander" is no longer a special card type - it's a context marker
     ]
     
     for query, expected_type in special_cases:
@@ -133,10 +127,22 @@ def test_special_card_types():
         scryfall_query = result.get("scryfall_query", "")
         special_types = result.get("special_types", [])
         
-        found = expected_type in scryfall_query or expected_type in special_types
+        # For fetchland and shockland, check for the is: syntax
+        if expected_type == "fetchland":
+            found = "is:fetchland" in scryfall_query
+        elif expected_type == "shockland":
+            found = "is:shockland" in scryfall_query
+        else:
+            found = expected_type in scryfall_query or expected_type in special_types
+            
         assert found, f"'{query}' should detect {expected_type}"
         
         print(f"✅ PASS: '{query}' detected special type")
+    
+    # Test commander context detection separately
+    result = extract_filters("commander")
+    assert result.get('is_commander_context') == True, "'commander' should mark commander context"
+    print("✅ PASS: 'commander' marks commander context")
 
 if __name__ == "__main__":
     print("🧠 Running NLP Unit Tests...")

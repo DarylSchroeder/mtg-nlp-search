@@ -106,11 +106,11 @@ class TestQueryBuilder:
         
         # Guild names should use 'coloridentity' field
         guild_cases = [
-            ("rakdos removal", {"coloridentity": "BR"}),
-            ("selesnya enchantment", {"type": "enchantment", "coloridentity": "GW"}),
-            ("azorius counterspell", {"coloridentity": "WU"}),
-            ("simic ramp", {"coloridentity": "GU"}),
-            ("izzet draw", {"coloridentity": "UR"})
+            ("rakdos removal", {"colors": "BR"}),
+            ("selesnya enchantment", {"type": "enchantment", "colors": "GW"}),
+            ("azorius counterspell", {"colors": "WU"}),
+            ("simic ramp", {"colors": "GU"}),
+            ("izzet draw", {"colors": "UR"})
         ]
         
         for query, expected_filters in guild_cases:

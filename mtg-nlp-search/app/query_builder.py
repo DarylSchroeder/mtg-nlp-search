@@ -90,8 +90,8 @@ class QueryBuilder:
     
     # Special land types
     SPECIAL_LANDS = {
-        'fetchland': 'o:"search your library" o:"shuffle" type:land',
-        'shockland': 'o:"as ~ enters" o:"2 damage" type:land',
+        'fetchland': 'is:fetchland',
+        'shockland': 'is:shockland',
         'triome': 'o:"cycling" o:"enters tapped" type:land',
         'dual land': 'o:"{" o:"}" type:land',
         'basic land': 'type:basic type:land',
@@ -373,40 +373,20 @@ class QueryBuilder:
                 break
     
     def _extract_commanders(self):
-        """Extract commander information"""
+        """Handle commander context keywords (but do NOT infer commander colors from text)"""
         prompt = ' '.join(self.state.tokens)
         
-        # Look for commander patterns
-        commander_patterns = [
-            r'for my (\w+(?:[\s\-]+\w+)*) deck',
-            r'for (\w+(?:[\s\-]+\w+)*)',
-            r'(\w+(?:[\s\-]+\w+)*) commander'
-        ]
+        # Check for commander context keywords - this just marks the context, doesn't set colors
+        commander_keywords = ['for my', 'for', 'commander', 'deck']
+        has_commander_context = any(keyword in prompt for keyword in commander_keywords)
         
-        for pattern in commander_patterns:
-            matches = re.findall(pattern, prompt)
-            for match in matches:
-                commander_name = match.strip()
-                
-                # Try to find in commander database first
-                try:
-                    from app.commanders import commander_db
-                    if commander_db.loaded:
-                        commander_colors = commander_db.get_commander_colors(commander_name)
-                        if commander_colors:
-                            self.state.filters['coloridentity'] = commander_colors
-                            self.state.filters['is_commander_context'] = True  # Commander detection always means commander context
-                            print(f"🔧 Found commander (DB): {commander_name} -> {commander_colors}")
-                            return
-                except ImportError:
-                    pass
-                
-                # Fallback to hardcoded commanders
-                if commander_name in self.COMMANDERS:
-                    self.state.filters['coloridentity'] = self.COMMANDERS[commander_name]
-                    self.state.filters['is_commander_context'] = True  # Commander detection always means commander context
-                    print(f"🔧 Found commander (fallback): {commander_name} -> {self.COMMANDERS[commander_name]} (commander context)")
-                    return
+        if has_commander_context:
+            print(f"🔧 Found commander context keyword: '{next(k for k in commander_keywords if k in prompt)}'")
+            self.state.filters['is_commander_context'] = True
+        
+        # NOTE: We do NOT automatically infer commander colors from names like "Chulane"
+        # Commander colors must be explicitly provided via the API's commander_colors parameter
+        # This ensures consistent behavior and avoids ambiguity
     
     def _apply_modifiers(self):
         """Apply effect modifiers that transform the query"""
