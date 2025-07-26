@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Query, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from app.nlp import extract_filters
+from app.query_builder import extract_filters
 from app.scryfall import search_scryfall
 from app.deck_analyzer import DeckAnalyzer
 from app.commanders import commander_db
