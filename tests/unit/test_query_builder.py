@@ -150,7 +150,7 @@ class TestQueryBuilder:
             # Removal modifiers
             ("blue artifact removal", {
                 "colors": "U",
-                "scryfall_query": "(o:destroy or o:exile or o:\"put into\") and o:artifact"
+                "scryfall_query": "(o:destroy or o:exile or o:\"put into\") and (o:artifact or o:permanent)"
             }),
             ("removal for Atraxa", {
                 "coloridentity": "WUBG",
@@ -266,6 +266,85 @@ class TestQueryBuilder:
             
             print(f"✅ PASS: '{query}' tokenized correctly: {tokens}")
     
+    def test_permanent_type_removal(self):
+        """Test that removal targeting permanent types includes o:permanent clause"""
+        
+        # Permanent types should include o:permanent clause
+        permanent_removal_cases = [
+            ("artifact removal", "(o:destroy or o:exile or o:\"put into\") and (o:artifact or o:permanent)"),
+            ("creature removal", "(o:destroy or o:exile or o:\"put into\") and (o:creature or o:permanent)"),
+            ("enchantment removal", "(o:destroy or o:exile or o:\"put into\") and (o:enchantment or o:permanent)"),
+            ("planeswalker removal", "(o:destroy or o:exile or o:\"put into\") and (o:planeswalker or o:permanent)")
+        ]
+        
+        for query, expected_scryfall in permanent_removal_cases:
+            result = extract_filters(query)
+            scryfall_query = result.get("scryfall_query", "")
+            
+            assert scryfall_query == expected_scryfall, f"'{query}' should include permanent clause: expected {expected_scryfall}, got {scryfall_query}"
+            print(f"✅ PASS: '{query}' includes permanent clause correctly")
+        
+        # Non-permanent types should NOT include o:permanent clause
+        non_permanent_removal_cases = [
+            ("land removal", "(o:destroy or o:exile or o:\"put into\") and o:land"),
+            ("instant removal", "(o:destroy or o:exile or o:\"put into\") and o:instant"),
+            ("sorcery removal", "(o:destroy or o:exile or o:\"put into\") and o:sorcery")
+        ]
+        
+        for query, expected_scryfall in non_permanent_removal_cases:
+            result = extract_filters(query)
+            scryfall_query = result.get("scryfall_query", "")
+            
+            assert scryfall_query == expected_scryfall, f"'{query}' should NOT include permanent clause: expected {expected_scryfall}, got {scryfall_query}"
+            print(f"✅ PASS: '{query}' correctly excludes permanent clause")
+    
+    def test_tricky_edge_cases(self):
+        """Test tricky edge cases that might confuse regex systems"""
+        
+        tricky_cases = [
+            # Counter vs +1/+1 counter disambiguation
+            ("counter target spell", {
+                "type": "instant",
+                "scryfall_query": "o:\"counter target\""
+            }),
+            ("put +1/+1 counter on target creature", {
+                "scryfall_query": "type:creature o:\"+1/+1 counter\""
+            }),
+            
+            # Mixed signals should be handled gracefully
+            ("counter spell that cannot be countered", {}),  # Should return nothing
+            
+            # Context-sensitive parsing
+            ("blue counter magic", {
+                "colors": "U",
+                "type": "instant", 
+                "scryfall_query": "o:\"counter target\""
+            }),
+            
+            # Compound effects
+            ("artifact that puts +1/+1 counters", {
+                "scryfall_query": "type:artifact o:\"+1/+1 counter\""
+            }),
+            
+            # Commander context overrides guild context
+            ("simic ramp for my Chulane deck", {
+                "coloridentity": "GWU",  # Should use Chulane's colors, not Simic
+                "scryfall_query": "(o:\"search your library\" o:land) or (o:\"add\" o:\"mana\")"
+            })
+        ]
+        
+        for query, expected_filters in tricky_cases:
+            result = extract_filters(query)
+            
+            if not expected_filters:  # Empty expected result
+                assert len(result) == 0, f"'{query}' should return no filters, got {result}"
+            else:
+                for key, expected_value in expected_filters.items():
+                    actual_value = result.get(key)
+                    assert actual_value == expected_value, f"'{query}' - {key}: expected {expected_value}, got {actual_value}"
+            
+            print(f"✅ PASS: '{query}' handled correctly")
+    
     def test_sample_queries_compatibility(self):
         """Test compatibility with frontend sample queries"""
         
@@ -340,7 +419,13 @@ def run_all_tests():
         test_suite.test_pump_effects()
         print()
         
+        test_suite.test_permanent_type_removal()
+        print()
+        
         test_suite.test_tokenization()
+        print()
+        
+        test_suite.test_tricky_edge_cases()
         print()
         
         test_suite.test_sample_queries_compatibility()

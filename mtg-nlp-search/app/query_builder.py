@@ -338,9 +338,13 @@ class QueryBuilder:
             
             if effect_name == 'removal':
                 # "artifact removal" -> spells that can remove artifacts
-                self.state.filters['scryfall_query'] = f"{oracle_text} and o:{target_type}"
+                # Since artifacts are permanents, include both o:artifact and o:permanent
+                if target_type in ['artifact', 'creature', 'enchantment', 'planeswalker']:
+                    self.state.filters['scryfall_query'] = f"{oracle_text} and (o:{target_type} or o:permanent)"
+                else:
+                    self.state.filters['scryfall_query'] = f"{oracle_text} and o:{target_type}"
                 del self.state.filters['type']  # We're not looking for artifacts, but spells that affect artifacts
-                print(f"🔧 Transformed to {effect_name} targeting {target_type}")
+                print(f"🔧 Transformed to {effect_name} targeting {target_type} (including permanents)")
             
             elif effect_name == 'counterspell':
                 # "creature counterspell" -> counterspells (which are instants)
