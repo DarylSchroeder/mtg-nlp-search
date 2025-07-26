@@ -206,6 +206,7 @@ def extract_filters_fallback(prompt: str) -> dict:
     else:
         print(f"🔍 DEBUG: No color identity found, checking individual colors")
         # Check for individual colors if no guild/commander context found
+        import re
         individual_colors = []
         for color_name, color_code in COLOR_MAP.items():
             # Use word boundaries to prevent substring matches
@@ -405,17 +406,6 @@ def extract_color_identity(prompt_lower: str) -> tuple:
                     color_identity = colors
                     is_commander_context = True
                     break
-    
-    # Check individual colors - always use color
-    if not color_identity:
-        color_map = {'white': 'W', 'blue': 'U', 'black': 'B', 'red': 'R', 'green': 'G'}
-        found_colors = []
-        for color_name, color_code in color_map.items():
-            if color_name in prompt_lower:
-                found_colors.append(color_code)
-        
-        if found_colors:
-            color_identity = ''.join(sorted(found_colors))
     
     print(f"🎨 DEBUG: extract_color_identity result - color_identity: '{color_identity}', is_commander_context: {is_commander_context}")
     return color_identity, is_commander_context, debug_info
