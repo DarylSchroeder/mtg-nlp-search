@@ -150,11 +150,11 @@ class TestQueryBuilder:
             # Removal modifiers
             ("blue artifact removal", {
                 "colors": "U",
-                "scryfall_query": "(o:destroy or o:exile or o:\"put into\") and (o:artifact or o:permanent)"
+                "scryfall_query": "(o:destroy or o:\"put into\" or o:exile) and (o:creature or o:artifact or o:enchantment or o:planeswalker or o:permanent) and (o:artifact or o:permanent)"
             }),
             ("removal for Atraxa", {
                 "coloridentity": "WUBG",
-                "scryfall_query": "(o:destroy or o:exile or o:\"put into\")"
+                "scryfall_query": "(o:destroy or o:\"put into\" or o:exile) and (o:creature or o:artifact or o:enchantment or o:planeswalker or o:permanent)"
             }),
             
             # Counterspell modifiers
@@ -271,10 +271,10 @@ class TestQueryBuilder:
         
         # Permanent types should include o:permanent clause
         permanent_removal_cases = [
-            ("artifact removal", "(o:destroy or o:exile or o:\"put into\") and (o:artifact or o:permanent)"),
-            ("creature removal", "(o:destroy or o:exile or o:\"put into\") and (o:creature or o:permanent)"),
-            ("enchantment removal", "(o:destroy or o:exile or o:\"put into\") and (o:enchantment or o:permanent)"),
-            ("planeswalker removal", "(o:destroy or o:exile or o:\"put into\") and (o:planeswalker or o:permanent)")
+            ("artifact removal", "(o:destroy or o:\"put into\" or o:exile) and (o:creature or o:artifact or o:enchantment or o:planeswalker or o:permanent) and (o:artifact or o:permanent)"),
+            ("creature removal", "(o:destroy or o:\"put into\" or o:exile) and (o:creature or o:artifact or o:enchantment or o:planeswalker or o:permanent) and (o:creature or o:permanent)"),
+            ("enchantment removal", "(o:destroy or o:\"put into\" or o:exile) and (o:creature or o:artifact or o:enchantment or o:planeswalker or o:permanent) and (o:enchantment or o:permanent)"),
+            ("planeswalker removal", "(o:destroy or o:\"put into\" or o:exile) and (o:creature or o:artifact or o:enchantment or o:planeswalker or o:permanent) and (o:planeswalker or o:permanent)")
         ]
         
         for query, expected_scryfall in permanent_removal_cases:

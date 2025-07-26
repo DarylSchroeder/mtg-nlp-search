@@ -18,9 +18,13 @@ def build_query(filters: dict) -> str:
         scryfall_query = filters['scryfall_query']
         parts.append(f"({scryfall_query})")
     
-    # Mana cost
+    # Mana cost - handle different comparison operators
     if "cmc" in filters:
-        parts.append(f"cmc:{filters['cmc']}")
+        parts.append(f"cmc={filters['cmc']}")
+    elif "cmc_gte" in filters:
+        parts.append(f"cmc>={filters['cmc_gte']}")
+    elif "cmc_lte" in filters:
+        parts.append(f"cmc<={filters['cmc_lte']}")
     
     # Card type (only add if not already in scryfall_query)
     if "type" in filters and "scryfall_query" not in filters:
@@ -31,15 +35,15 @@ def build_query(filters: dict) -> str:
         else:
             parts.append(f"type:{type_value}")
     
-    # Colors (actual card colors - uses color:) - avoid duplication
-    if "colors" in filters and f"color:{filters['colors']}" not in scryfall_query:
-        parts.append(f"color:{filters['colors']}")
+    # Colors (actual card colors - uses color=) - avoid duplication
+    if "colors" in filters and f"color={filters['colors']}" not in scryfall_query:
+        parts.append(f"color={filters['colors']}")
     
-    # Color identity (regular - allows subset matching) - avoid duplication
-    if "coloridentity" in filters and f"coloridentity:{filters['coloridentity']}" not in scryfall_query:
-        parts.append(f"coloridentity:{filters['coloridentity']}")
+    # Color identity (exact match - uses color=) - avoid duplication
+    if "coloridentity" in filters and f"color={filters['coloridentity']}" not in scryfall_query:
+        parts.append(f"color={filters['coloridentity']}")
     
-    # Color identity exact (requires exact match)
+    # Color identity exact (requires exact match) - DEPRECATED, use coloridentity instead
     if "coloridentity_exact" in filters:
         parts.append(f"color={filters['coloridentity_exact']}")
     

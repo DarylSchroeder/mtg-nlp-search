@@ -99,9 +99,14 @@ class QueryBuilder:
             'transforms': {'type': 'instant'}  # Counterspells are typically instants
         },
         'removal': {
-            'patterns': ['removal', 'destroy', 'remove', 'exile'],
-            'oracle_text': '(o:destroy or o:exile or o:"put into")',
+            'patterns': ['removal', 'destroy', 'remove'],
+            'oracle_text': '(o:destroy or o:"put into" or o:exile) and (o:creature or o:artifact or o:enchantment or o:planeswalker or o:permanent)',
             'transforms': {}  # Can be any type
+        },
+        'graveyard_hate': {
+            'patterns': ['graveyard hate', 'exile graveyard', 'graveyard removal', r'exile.*graveyard', r'graveyard.*exile', r'exile.*all.*graveyard'],
+            'oracle_text': '(o:"exile" and (o:graveyard or o:"from graveyard" or o:"all graveyards"))',
+            'transforms': {}
         },
         'ramp': {
             'patterns': ['ramp', r'mana acceleration', r'search.*land'],
@@ -182,15 +187,50 @@ class QueryBuilder:
         return tokens
     
     def _extract_mana_cost(self):
-        """Extract mana cost information"""
+        """Extract mana cost information with comparison operators"""
         for i, token in enumerate(self.state.tokens):
             if i in self.state.consumed_tokens:
                 continue
                 
-            # Look for patterns like "1 mana", "2 cost", "3 cmc"
-            if token.isdigit():
+            # Look for patterns like "3+ mana", "5+ cost"
+            if token.endswith('+') and token[:-1].isdigit():
                 next_token = self.state.tokens[i + 1] if i + 1 < len(self.state.tokens) else None
                 if next_token in ['mana', 'cost', 'cmc']:
+                    value = int(token[:-1])
+                    self.state.filters['cmc_gte'] = value
+                    self.state.consumed_tokens.add(i)
+                    self.state.consumed_tokens.add(i + 1)
+                    print(f"🔧 Found CMC >=: {value}")
+                    break
+                    
+            # Look for patterns like "1 mana", "2 cost", "3 cmc"
+            elif token.isdigit():
+                next_token = self.state.tokens[i + 1] if i + 1 < len(self.state.tokens) else None
+                
+                # Check for "X or less/fewer mana" pattern
+                if (i + 3 < len(self.state.tokens) and 
+                    self.state.tokens[i + 1] == 'or' and 
+                    self.state.tokens[i + 2] in ['less', 'fewer'] and
+                    self.state.tokens[i + 3] in ['mana', 'cost', 'cmc']):
+                    value = int(token)
+                    self.state.filters['cmc_lte'] = value
+                    self.state.consumed_tokens.update([i, i + 1, i + 2, i + 3])
+                    print(f"🔧 Found CMC <=: {value}")
+                    break
+                    
+                # Check for "X or more mana" pattern
+                elif (i + 3 < len(self.state.tokens) and 
+                      self.state.tokens[i + 1] == 'or' and 
+                      self.state.tokens[i + 2] == 'more' and
+                      self.state.tokens[i + 3] in ['mana', 'cost', 'cmc']):
+                    value = int(token)
+                    self.state.filters['cmc_gte'] = value
+                    self.state.consumed_tokens.update([i, i + 1, i + 2, i + 3])
+                    print(f"🔧 Found CMC >=: {value}")
+                    break
+                    
+                # Simple "X mana" pattern
+                elif next_token in ['mana', 'cost', 'cmc']:
                     self.state.filters['cmc'] = int(token)
                     self.state.consumed_tokens.add(i)
                     self.state.consumed_tokens.add(i + 1)
@@ -215,6 +255,27 @@ class QueryBuilder:
                     self.state.consumed_tokens.add(i)
                     self.state.consumed_tokens.add(i + 1)
                     print(f"🔧 Found X cost")
+                    break
+            
+            # Handle descriptive CMC terms
+            elif token in ['high', 'expensive']:
+                next_token = self.state.tokens[i + 1] if i + 1 < len(self.state.tokens) else None
+                if next_token in ['cmc', 'cost', 'mana'] or 'cmc' in self.state.tokens:
+                    self.state.filters['cmc_gte'] = 6  # High CMC typically means 6+
+                    self.state.consumed_tokens.add(i)
+                    if next_token in ['cmc', 'cost', 'mana']:
+                        self.state.consumed_tokens.add(i + 1)
+                    print(f"🔧 Found high CMC: >=6")
+                    break
+                    
+            elif token in ['low', 'cheap']:
+                next_token = self.state.tokens[i + 1] if i + 1 < len(self.state.tokens) else None
+                if next_token in ['cmc', 'cost', 'mana'] or 'cmc' in self.state.tokens:
+                    self.state.filters['cmc_lte'] = 2  # Low CMC typically means 2 or less
+                    self.state.consumed_tokens.add(i)
+                    if next_token in ['cmc', 'cost', 'mana']:
+                        self.state.consumed_tokens.add(i + 1)
+                    print(f"🔧 Found low CMC: <=2")
                     break
     
     def _extract_colors(self):
@@ -270,11 +331,18 @@ class QueryBuilder:
                 print(f"🔧 Found compound type: {compound_type}")
                 return
         
-        # Check for basic types
+        # Check for basic types (handle plurals)
         for token in self.state.tokens:
+            # Handle plurals by removing 's' if present
+            singular_token = token.rstrip('s') if token.endswith('s') and len(token) > 1 else token
+            
             if token in self.BASIC_TYPES:
                 self.state.filters['type'] = token
                 print(f"🔧 Found type: {token}")
+                break
+            elif singular_token in self.BASIC_TYPES:
+                self.state.filters['type'] = singular_token
+                print(f"🔧 Found type: {singular_token} (from plural {token})")
                 break
     
     def _extract_commanders(self):
