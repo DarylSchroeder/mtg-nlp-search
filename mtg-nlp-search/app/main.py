@@ -312,7 +312,7 @@ def health_check():
             "ready_for_search": commander_db.loaded and not is_cold_start
         },
         "cold_start": is_cold_start,
-        "version": "1.0.0"  # You can update this manually or read from a version file
+        "version": "1.0.1"  # You can update this manually or read from a version file
     }
 
 @app.get("/commanders")
