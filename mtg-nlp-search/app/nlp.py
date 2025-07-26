@@ -207,7 +207,6 @@ def extract_filters_fallback(prompt: str) -> dict:
         print(f"🔍 DEBUG: No color identity found, checking individual colors")
         # Check for individual colors if no guild/commander context found
         individual_colors = []
-        import re
         for color_name, color_code in COLOR_MAP.items():
             # Use word boundaries to prevent substring matches
             pattern = r'\b' + re.escape(color_name.lower()) + r'\b'
@@ -303,6 +302,7 @@ def extract_color_identity(prompt_lower: str) -> tuple:
     - is_commander_context is True when we should use 'coloridentity:' instead of 'color:'
     - debug_info contains matching details for debugging
     """
+    import re  # Import at function level to avoid scope issues
     
     debug_info = {
         "input": prompt_lower,
@@ -318,7 +318,6 @@ def extract_color_identity(prompt_lower: str) -> tuple:
     is_commander_context = False
     
     # Check guild names - use coloridentity for deck building context
-    import re
     for guild, colors in GUILD_COLORS.items():
         # Use word boundaries to prevent substring matches
         pattern = r'\b' + re.escape(guild.lower()) + r'\b'
@@ -380,7 +379,6 @@ def extract_color_identity(prompt_lower: str) -> tuple:
             
             # Also check direct commander name mentions
             if not color_identity:
-                import re
                 for commander_name in commander_db.commanders.keys():
                     # Use word boundaries to prevent substring matches
                     pattern = r'\b' + re.escape(commander_name.lower()) + r'\b'
@@ -395,7 +393,6 @@ def extract_color_identity(prompt_lower: str) -> tuple:
                         break
         else:
             # Fallback to hardcoded commanders if database not loaded
-            import re
             for commander, colors in COMMANDERS.items():
                 # Use word boundaries to prevent substring matches
                 pattern = r'\b' + re.escape(commander.lower()) + r'\b'
