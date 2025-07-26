@@ -122,20 +122,68 @@ def debug_nlp(prompt: str = Query(..., description="Debug NLP parsing")):
             "debug": "Error in NLP parsing"
         }
 
+@app.get("/commanders")
+def get_commanders(search: str = Query(None, description="Search commander names"), full_names: bool = Query(False, description="Return full names instead of keys")):
+    """Get commander information"""
+    if not commander_db.loaded:
+        return {
+            "loaded": False,
+            "message": "Commander database still loading, please try again in a moment"
+        }
+    
+    if search:
+        # Search for specific commanders
+        results = commander_db.search_commanders(search, limit=20)
+        return {
+            "loaded": True,
+            "query": search,
+            "results": results,
+            "total_commanders": len(commander_db.commanders)
+        }
+    elif full_names:
+        # Return all commanders with full names (for frontend cache)
+        commanders = []
+        for name_key, color_identity in commander_db.commanders.items():
+            card_info = commander_db.commander_cards.get(name_key, {})
+            commanders.append({
+                "name": card_info.get("name", name_key.title()),
+                "colors": color_identity
+            })
+        return sorted(commanders, key=lambda x: x["name"])
+    else:
+        # Return summary info
+        return {
+            "loaded": True,
+            "total_commanders": len(commander_db.commanders),
+            "sample_commanders": list(commander_db.commanders.keys())[:20],
+            "message": "Use ?search=name to search for specific commanders, or ?full_names=true to get all commanders with full names"
+        }
+
 @app.get("/search")
 def search(
     prompt: str = Query(..., description="Describe the kind of card you're looking for."),
     page: int = Query(1, ge=1, description="Page number (starts at 1)"),
-    per_page: int = Query(20, ge=1, le=100, description="Results per page (1-100)")
+    per_page: int = Query(20, ge=1, le=100, description="Results per page (1-100)"),
+    commander_colors: str = Query(None, description="Commander color identity (e.g., 'WUBG' for Atraxa)")
 ):
     try:
         # Try to extract filters using NLP
         filters = extract_filters(prompt)
         print(f"API: Extracted filters: {filters}")
         
+        # If commander colors are explicitly provided, override any color/coloridentity
+        if commander_colors:
+            filters['coloridentity'] = commander_colors
+            filters['is_commander_context'] = True
+            print(f"API: Applied commander colors: {commander_colors}")
+        
         # If OpenAI failed, create a basic filter from the prompt
         if not filters or (len(filters) == 1 and "raw_query" in filters):
             filters = {"raw_query": prompt}
+            # Still apply commander colors if provided
+            if commander_colors:
+                filters['coloridentity'] = commander_colors
+                filters['is_commander_context'] = True
             print(f"API: Using raw query: {prompt}")
         
         # Calculate which Scryfall page we need
@@ -316,32 +364,23 @@ def health_check():
         "version": "1.0.1"  # You can update this manually or read from a version file
     }
 
-@app.get("/commanders")
-def get_commanders(search: str = Query(None, description="Search commander names")):
-    """Get commander information"""
+@app.get("/commanders/search")
+def search_commanders(search: str = Query(..., description="Search commander names")):
+    """Search for specific commanders"""
     if not commander_db.loaded:
         return {
             "loaded": False,
             "message": "Commander database still loading, please try again in a moment"
         }
     
-    if search:
-        # Search for specific commanders
-        results = commander_db.search_commanders(search, limit=20)
-        return {
-            "loaded": True,
-            "query": search,
-            "results": results,
-            "total_commanders": len(commander_db.commanders)
-        }
-    else:
-        # Return summary info
-        return {
-            "loaded": True,
-            "total_commanders": len(commander_db.commanders),
-            "sample_commanders": list(commander_db.commanders.keys())[:20],
-            "message": "Use ?search=name to search for specific commanders"
-        }
+    # Search for specific commanders
+    results = commander_db.search_commanders(search, limit=20)
+    return {
+        "loaded": True,
+        "query": search,
+        "results": results,
+        "total_commanders": len(commander_db.commanders)
+    }
 
 @app.get("/commanders/{commander_name}")
 def get_commander_info(commander_name: str):

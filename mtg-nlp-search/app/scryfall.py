@@ -4,7 +4,17 @@ import time
 import re
 
 def build_query(filters: dict) -> str:
-    """Build Scryfall query from extracted filters"""
+    """
+    Build Scryfall query from extracted filters
+    
+    ⚠️ CRITICAL: Scryfall Color Syntax Rules
+    - COLOR, CMC, COLORIDENTITY must use = operators, NOT : syntax!
+    - COLOR=R → exactly RED only (mono-red cards)
+    - COLOR>=R → has RED in it (red + any other colors)  
+    - COLOR<=R → red color identity (same as COLORIDENTITY=R)
+    - CMC=3 → exactly 3 mana cost
+    - Other fields (o:, type:, name:) still use : syntax
+    """
     
     # Always include game:paper filter for physical cards only
     base_parts = ["game:paper"]
@@ -18,16 +28,16 @@ def build_query(filters: dict) -> str:
         scryfall_query = filters['scryfall_query']
         parts.append(f"({scryfall_query})")
     
-    # Mana cost - handle different comparison operators
+    # Mana cost - MUST use = syntax, not : syntax
     if "cmc" in filters:
-        parts.append(f"cmc={filters['cmc']}")
+        parts.append(f"CMC={filters['cmc']}")  # Fixed: was cmc=, now CMC=
     elif "cmc_gte" in filters:
-        parts.append(f"cmc>={filters['cmc_gte']}")
+        parts.append(f"CMC>={filters['cmc_gte']}")  # Fixed: was cmc>=, now CMC>=
     elif "cmc_lte" in filters:
-        parts.append(f"cmc<={filters['cmc_lte']}")
+        parts.append(f"CMC<={filters['cmc_lte']}")  # Fixed: was cmc<=, now CMC<=
     
-    # Card type (only add if not already in scryfall_query)
-    if "type" in filters and "scryfall_query" not in filters:
+    # Card type - uses : syntax (this is correct)
+    if "type" in filters:
         type_value = filters['type']
         # If multiple types, wrap in quotes for Scryfall
         if ' ' in type_value:
@@ -35,17 +45,23 @@ def build_query(filters: dict) -> str:
         else:
             parts.append(f"type:{type_value}")
     
-    # Colors (actual card colors - uses color=) - avoid duplication
-    if "colors" in filters and f"color={filters['colors']}" not in scryfall_query:
-        parts.append(f"color={filters['colors']}")
+    # Colors (actual card colors) - MUST use COLOR= syntax, not color:
+    if "colors" in filters and f"COLOR={filters['colors']}" not in scryfall_query:
+        parts.append(f"COLOR={filters['colors']}")  # Fixed: was color:, now COLOR=
     
-    # Color identity (exact match - uses color=) - avoid duplication
-    if "coloridentity" in filters and f"color={filters['coloridentity']}" not in scryfall_query:
-        parts.append(f"color={filters['coloridentity']}")
+    # Color identity - distinguish between guild names (exact) and commander context (identity)
+    if "coloridentity" in filters and f"COLOR={filters['coloridentity']}" not in scryfall_query and f"COLOR<={filters['coloridentity']}" not in scryfall_query:
+        # For guild names like "azorius" (WU), we want exactly those colors: COLOR=WU
+        # For commander context like "removal for Atraxa", we want color identity: COLOR<=WUBG
+        # Default to exact match for guild names, query_builder should specify if it's commander context
+        if filters.get('is_commander_context', False):
+            parts.append(f"COLOR<={filters['coloridentity']}")  # Commander context: color identity constraint
+        else:
+            parts.append(f"COLOR={filters['coloridentity']}")   # Guild names: exactly those colors
     
     # Color identity exact (requires exact match) - DEPRECATED, use coloridentity instead
     if "coloridentity_exact" in filters:
-        parts.append(f"color={filters['coloridentity_exact']}")
+        parts.append(f"COLOR={filters['coloridentity_exact']}")  # Fixed: was color=, now COLOR=
     
     # Format
     if "format" in filters:

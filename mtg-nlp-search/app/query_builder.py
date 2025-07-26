@@ -4,6 +4,19 @@ Query Builder - A more robust approach to parsing MTG search queries
 
 This replaces the fragile regex-based approach in nlp.py with a builder pattern
 that processes tokens sequentially and applies modifiers intelligently.
+
+⚠️ CRITICAL: Scryfall Color Syntax Rules
+- COLOR, CMC, COLORIDENTITY must use = operators, NOT : syntax!
+- COLOR=R → exactly RED only (mono-red cards)
+- COLOR>=R → has RED in it (red + any other colors)  
+- COLOR<=R → red color identity (same as COLORIDENTITY=R)
+- CMC=3 → exactly 3 mana cost
+- Other fields (o:, type:, name:) still use : syntax
+
+Color Logic:
+- Individual colors ("blue", "red") → use 'colors' field → COLOR= in Scryfall
+- Guild names ("azorius", "simic") → use 'coloridentity' field → COLOR= in Scryfall (exactly those colors)
+- Commander context → use 'coloridentity' field → COLOR<= in Scryfall (color identity constraint)
 """
 
 import re
@@ -283,43 +296,55 @@ class QueryBuilder:
         color_identity = None
         is_commander_context = False
         
-        # Check for guild names (use coloridentity)
+        # First, check for actual commander context keywords
+        prompt_lower = ' '.join(self.state.tokens)
+        commander_keywords = [
+            'for my', 'for', 'deck', 'commander', 'legal in', 'in my', 
+            'edh', 'commander deck', 'my deck'
+        ]
+        
+        for keyword in commander_keywords:
+            if keyword in prompt_lower:
+                is_commander_context = True
+                print(f"🔧 Found commander context keyword: '{keyword}'")
+                break
+        
+        # Check for guild names (always exact match unless commander context detected above)
         for token in self.state.tokens:
             if token in self.GUILD_COLORS:
                 color_identity = self.GUILD_COLORS[token]
-                is_commander_context = True
-                print(f"🔧 Found guild: {token} -> {color_identity}")
+                print(f"🔧 Found guild: {token} -> {color_identity} ({'commander context' if is_commander_context else 'exact match'})")
                 break
         
-        # Check for shard/wedge names (use coloridentity)
+        # Check for shard/wedge names (always exact match unless commander context detected above)
         if not color_identity:
             for token in self.state.tokens:
                 if token in self.SHARD_COLORS:
                     color_identity = self.SHARD_COLORS[token]
-                    is_commander_context = True
-                    print(f"🔧 Found shard: {token} -> {color_identity}")
+                    print(f"🔧 Found shard: {token} -> {color_identity} ({'commander context' if is_commander_context else 'exact match'})")
                     break
                 elif token in self.WEDGE_COLORS:
                     color_identity = self.WEDGE_COLORS[token]
-                    is_commander_context = True
-                    print(f"🔧 Found wedge: {token} -> {color_identity}")
+                    print(f"🔧 Found wedge: {token} -> {color_identity} ({'commander context' if is_commander_context else 'exact match'})")
                     break
         
-        # Check for individual colors (use colors)
+        # Check for individual colors (always exact match, never commander context)
         if not color_identity:
             for token in self.state.tokens:
                 if token in self.COLORS:
                     color_identity = self.COLORS[token]
-                    is_commander_context = False
-                    print(f"🔧 Found color: {token} -> {color_identity}")
+                    is_commander_context = False  # Individual colors are never commander context
+                    print(f"🔧 Found color: {token} -> {color_identity} (exact match)")
                     break
         
         # Store the appropriate field
         if color_identity:
             if is_commander_context:
                 self.state.filters['coloridentity'] = color_identity
+                self.state.filters['is_commander_context'] = True
             else:
-                self.state.filters['colors'] = color_identity
+                self.state.filters['coloridentity'] = color_identity
+                self.state.filters['is_commander_context'] = False
     
     def _extract_types(self):
         """Extract card type information"""
@@ -376,7 +401,8 @@ class QueryBuilder:
                 # Fallback to hardcoded commanders
                 if commander_name in self.COMMANDERS:
                     self.state.filters['coloridentity'] = self.COMMANDERS[commander_name]
-                    print(f"🔧 Found commander (fallback): {commander_name} -> {self.COMMANDERS[commander_name]}")
+                    self.state.filters['is_commander_context'] = True  # Commander detection always means commander context
+                    print(f"🔧 Found commander (fallback): {commander_name} -> {self.COMMANDERS[commander_name]} (commander context)")
                     return
     
     def _apply_modifiers(self):
@@ -400,31 +426,59 @@ class QueryBuilder:
         """Transform existing filters based on the effect modifier"""
         oracle_text = effect_config['oracle_text']
         
-        # If we have a type filter, we're looking for spells that affect that type
+        # If we have a type filter, determine if it's a spell type or target type
         if 'type' in self.state.filters:
-            target_type = self.state.filters['type']
+            type_value = self.state.filters['type']
+            
+            # Pure spell types: these describe what the card IS (keep as type filter)
+            pure_spell_types = {'instant', 'sorcery'}
+            # Pure target types: these describe what the spell AFFECTS (convert to oracle text)
+            pure_target_types = {'creature', 'planeswalker'}
+            # Ambiguous types: could be either spell type or target type
+            ambiguous_types = {'artifact', 'enchantment'}
+            # Permanent types: when targeted, include o:permanent clause
+            permanent_types = {'artifact', 'creature', 'enchantment', 'planeswalker'}
             
             if effect_name == 'removal':
-                # "artifact removal" -> spells that can remove artifacts
-                # Since artifacts are permanents, include both o:artifact and o:permanent
-                if target_type in ['artifact', 'creature', 'enchantment', 'planeswalker']:
-                    self.state.filters['scryfall_query'] = f"{oracle_text} and (o:{target_type} or o:permanent)"
+                if type_value in pure_spell_types:
+                    # "instant removal" -> removal spells that are instants
+                    self.state.filters['scryfall_query'] = oracle_text
+                    # Keep the type filter - we want instant removal spells
+                    print(f"🔧 Transformed to {effect_name} spells of type {type_value}")
+                elif type_value in pure_target_types:
+                    # "creature removal" -> spells that remove creatures
+                    self.state.filters['scryfall_query'] = f"{oracle_text} and (o:{type_value} or o:permanent)"
+                    del self.state.filters['type']  # We're not looking for creatures, but spells that affect creatures
+                    print(f"🔧 Transformed to {effect_name} targeting {type_value} (including permanents)")
+                elif type_value in ambiguous_types:
+                    # For ambiguous types like "artifact", default to target for removal
+                    # "artifact removal" -> spells that remove artifacts
+                    self.state.filters['scryfall_query'] = f"{oracle_text} and (o:{type_value} or o:permanent)"
+                    del self.state.filters['type']
+                    print(f"🔧 Transformed to {effect_name} targeting {type_value} (including permanents)")
                 else:
-                    self.state.filters['scryfall_query'] = f"{oracle_text} and o:{target_type}"
-                del self.state.filters['type']  # We're not looking for artifacts, but spells that affect artifacts
-                print(f"🔧 Transformed to {effect_name} targeting {target_type} (including permanents)")
+                    # Other types (like land, instant, sorcery when used as targets) - no permanent clause
+                    self.state.filters['scryfall_query'] = f"{oracle_text} and o:{type_value}"
+                    del self.state.filters['type']
+                    print(f"🔧 Transformed to {effect_name} targeting {type_value}")
             
             elif effect_name == 'counterspell':
-                # "creature counterspell" -> counterspells (which are instants)
-                self.state.filters['scryfall_query'] = oracle_text
-                self.state.filters['type'] = 'instant'  # Override type
+                # Counterspells are always instants, regardless of what they counter
+                if type_value in pure_spell_types:
+                    # "instant counterspell" -> counterspells that are instants (redundant but valid)
+                    self.state.filters['scryfall_query'] = oracle_text
+                    self.state.filters['type'] = 'instant'  # Counterspells are instants
+                else:
+                    # "creature counterspell" -> counterspells that can counter creatures
+                    self.state.filters['scryfall_query'] = oracle_text
+                    self.state.filters['type'] = 'instant'  # Override type
                 print(f"🔧 Transformed to {effect_name}")
             
             elif effect_name == 'pump':
                 # "creature with +1/+1 counters" -> creatures that have/get +1/+1 counters
-                self.state.filters['scryfall_query'] = f"type:{target_type} {oracle_text}"
+                self.state.filters['scryfall_query'] = f"type:{type_value} {oracle_text}"
                 del self.state.filters['type']  # Replace with scryfall_query
-                print(f"🔧 Transformed to {target_type} with {effect_name}")
+                print(f"🔧 Transformed to {type_value} with {effect_name}")
         
         else:
             # No specific type, just add the effect

@@ -2,6 +2,30 @@
 
 A complete natural language search system for Magic: The Gathering cards with both API backend and web frontend.
 
+## ⚠️ **Critical: Scryfall Color Syntax**
+**COLOR, CMC, and COLORIDENTITY must use `=` operators, NOT `:` syntax!**
+
+- `COLOR=R` → **exactly RED only** (mono-red cards)
+- `COLOR>=R` → **has RED in it** (red + any other colors)  
+- `COLOR<=R` → **red color identity** (same as COLORIDENTITY=R)
+- `CMC=3` → **exactly 3 mana cost**
+- `CMC>=3` → **3 or more mana cost**
+- `CMC<=3` → **3 or less mana cost**
+
+**Other fields** like `o:`, `type:`, `name:` still use `:` syntax.
+
+**Examples:**
+```python
+# Individual colors use COLOR= (exact match)
+"blue artifact" → COLOR=U type:artifact
+
+# Guild names use COLOR<= (color identity)  
+"azorius counterspell" → COLOR<=WU o:"counter target"
+
+# Mana costs use CMC=
+"3 mana red creature" → CMC=3 COLOR=R type:creature
+```
+
 ## Repository Structure
 
 This is the **backend API repository**. The complete system consists of two independent repositories in a unified workspace:
