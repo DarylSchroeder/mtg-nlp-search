@@ -189,16 +189,36 @@ def extract_filters_fallback(prompt: str) -> dict:
             return {'type': 'land', 'scryfall_query': scryfall_query}
     
     # Extract color identity
+    print(f"🔍 DEBUG: About to call extract_color_identity with: '{prompt_lower}'")
     color_result = extract_color_identity(prompt_lower)
+    print(f"🔍 DEBUG: extract_color_identity returned: {color_result}")
+    
     if color_result[0]:  # If color_identity is not None
         color_identity, is_commander_context = color_result[0], color_result[1]
         
         if is_commander_context:
             # Commander context uses coloridentity
             filters['coloridentity'] = color_identity
+            print(f"🔍 DEBUG: Added coloridentity filter: {color_identity}")
         else:
             # Everything else uses color
             filters['colors'] = color_identity
+            print(f"🔍 DEBUG: Added colors filter: {color_identity}")
+    else:
+        print(f"🔍 DEBUG: No color identity found, checking individual colors")
+        # Check for individual colors if no guild/commander context found
+        individual_colors = []
+        for color_name, color_code in COLOR_MAP.items():
+            if color_name in prompt_lower:
+                print(f"🔍 DEBUG: Individual color found - '{color_name}' -> {color_code}")
+                individual_colors.append(color_code)
+        
+        if individual_colors:
+            color_string = ''.join(sorted(individual_colors))
+            filters["colors"] = color_string
+            print(f"🔍 DEBUG: Added individual colors filter: {color_string}")
+        else:
+            print(f"🔍 DEBUG: No colors found at all")
     
     # Extract format information
     format_patterns = {
@@ -278,12 +298,14 @@ def extract_color_identity(prompt_lower: str) -> tuple:
     - is_commander_context is True when we should use 'coloridentity:' instead of 'color:'
     """
     
+    print(f"🎨 DEBUG: extract_color_identity called with: '{prompt_lower}'")
     color_identity = None
     is_commander_context = False
     
     # Check guild names - use coloridentity for deck building context
     for guild, colors in GUILD_COLORS.items():
         if guild in prompt_lower:
+            print(f"🏛️ DEBUG: Guild match found - '{guild}' -> {colors}")
             color_identity = colors
             is_commander_context = True  # Guild names imply deck building context
             break
@@ -292,6 +314,7 @@ def extract_color_identity(prompt_lower: str) -> tuple:
     if not color_identity:
         for shard, colors in SHARD_COLORS.items():
             if shard in prompt_lower:
+                print(f"🔺 DEBUG: Shard match found - '{shard}' -> {colors}")
                 color_identity = colors
                 is_commander_context = True  # Shard names imply deck building context
                 break
@@ -300,6 +323,7 @@ def extract_color_identity(prompt_lower: str) -> tuple:
     if not color_identity:
         for wedge, colors in WEDGE_COLORS.items():
             if wedge in prompt_lower:
+                print(f"🔶 DEBUG: Wedge match found - '{wedge}' -> {colors}")
                 color_identity = colors
                 is_commander_context = True  # Wedge names imply deck building context
                 break
@@ -333,6 +357,7 @@ def extract_color_identity(prompt_lower: str) -> tuple:
             if not color_identity:
                 for commander_name in commander_db.commanders.keys():
                     if commander_name in prompt_lower:
+                        print(f"👑 DEBUG: Commander match found - '{commander_name}' -> {commander_db.commanders[commander_name]}")
                         color_identity = commander_db.commanders[commander_name]
                         is_commander_context = True
                         break
@@ -340,6 +365,7 @@ def extract_color_identity(prompt_lower: str) -> tuple:
             # Fallback to hardcoded commanders if database not loaded
             for commander, colors in COMMANDERS.items():
                 if commander in prompt_lower:
+                    print(f"👑 DEBUG: Fallback commander match found - '{commander}' -> {colors}")
                     color_identity = colors
                     is_commander_context = True
                     break
@@ -355,6 +381,7 @@ def extract_color_identity(prompt_lower: str) -> tuple:
         if found_colors:
             color_identity = ''.join(sorted(found_colors))
     
+    print(f"🎨 DEBUG: extract_color_identity result - color_identity: '{color_identity}', is_commander_context: {is_commander_context}")
     return color_identity, is_commander_context
 
 def extract_filters(prompt: str) -> dict:
