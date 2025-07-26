@@ -8,11 +8,12 @@ def build_query(filters: dict) -> str:
     Build Scryfall query from extracted filters
     
     ⚠️ CRITICAL: Scryfall Color Syntax Rules
-    - COLOR, CMC, COLORIDENTITY must use = operators, NOT : syntax!
+    - COLOR, CMC must use = operators, NOT : syntax!
     - COLOR=R → exactly RED only (mono-red cards)
     - COLOR>=R → has RED in it (red + any other colors)  
-    - COLOR<=R → red color identity (same as COLORIDENTITY=R)
+    - COLOR<=R → red color identity (same as commander:R)
     - CMC=3 → exactly 3 mana cost
+    - commander:UBG → cards legal in UBG commander deck
     - Other fields (o:, type:, name:) still use : syntax
     """
     
@@ -50,10 +51,10 @@ def build_query(filters: dict) -> str:
         parts.append(f"COLOR={filters['colors']}")  # Fixed: was color:, now COLOR=
     
     # Color identity - distinguish between guild names (exact) and commander context (identity)
-    if "coloridentity" in filters and f"COLOR={filters['coloridentity']}" not in scryfall_query and f"COLOR<={filters['coloridentity']}" not in scryfall_query and f"COLORIDENTITY={filters['coloridentity']}" not in scryfall_query:
+    if "coloridentity" in filters and f"COLOR={filters['coloridentity']}" not in scryfall_query and f"COLOR<={filters['coloridentity']}" not in scryfall_query and f"commander:{filters['coloridentity']}" not in scryfall_query:
         if filters.get('is_commander_context', False):
-            # Commander context: use COLORIDENTITY= for explicit commander constraints
-            parts.append(f"COLORIDENTITY={filters['coloridentity']}")  # Commander color identity constraint
+            # Commander context: use commander: for explicit commander constraints
+            parts.append(f"commander:{filters['coloridentity']}")  # Commander color identity constraint
         else:
             # Guild names detected in text: use COLOR= for exact color matching
             parts.append(f"COLOR={filters['coloridentity']}")   # Guild names: exactly those colors

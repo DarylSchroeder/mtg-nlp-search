@@ -4,6 +4,7 @@ from app.query_builder import extract_filters
 from app.scryfall import search_scryfall
 from app.deck_analyzer import DeckAnalyzer
 from app.commanders import commander_db
+from app.card_names import card_names_cache
 from typing import List
 import asyncio
 import datetime
@@ -65,9 +66,10 @@ app.add_middleware(
 
 @app.on_event("startup")
 async def startup_event():
-    """Load commander database at server startup"""
+    """Load commander database and card names at server startup"""
     # Run in background to not block startup
     asyncio.create_task(load_commanders_background())
+    asyncio.create_task(load_card_names_background())
 
 async def load_commanders_background():
     """Background task to load commanders with timeout and fallback"""
@@ -94,6 +96,28 @@ async def load_commanders_background():
     except Exception as e:
         print(f"❌ Commander loading failed: {e}")
         commander_db._load_fallback_commanders()
+
+async def load_card_names_background():
+    """Background task to load card names with timeout and fallback"""
+    try:
+        import asyncio
+        
+        async def load_with_timeout():
+            loop = asyncio.get_event_loop()
+            return await loop.run_in_executor(None, card_names_cache.load_card_names)
+        
+        # 30 second timeout for loading card names
+        try:
+            await asyncio.wait_for(load_with_timeout(), timeout=30.0)
+            print(f"🎉 Card names loaded successfully: {len(card_names_cache.card_names)} cards")
+                
+        except asyncio.TimeoutError:
+            print("⏰ Card names loading timed out after 30s")
+            card_names_cache.loaded = False
+            
+    except Exception as e:
+        print(f"❌ Card names loading failed: {e}")
+        card_names_cache.loaded = False
 
 @app.get("/")
 def read_root():
@@ -179,7 +203,7 @@ def search(
             # Set explicit commander constraint
             filters['coloridentity'] = commander_colors
             filters['is_commander_context'] = True
-            print(f"API: Applied explicit commander constraint: COLORIDENTITY={commander_colors}")
+            print(f"API: Applied explicit commander constraint: commander:{commander_colors}")
         
         # If OpenAI failed, create a basic filter from the prompt
         if not filters or (len(filters) == 1 and "raw_query" in filters):
@@ -366,7 +390,10 @@ def health_check():
         "services": {
             "commanders_loaded": commander_db.loaded,
             "commander_count": len(commander_db.commanders) if commander_db.loaded else 0,
-            "ready_for_search": commander_db.loaded and not is_cold_start
+            "card_names_loaded": card_names_cache.loaded,
+            "card_names_count": len(card_names_cache.card_names) if card_names_cache.loaded else 0,
+            "ready_for_search": commander_db.loaded and not is_cold_start,
+            "ready_for_lookahead": card_names_cache.loaded
         },
         "cold_start": is_cold_start,
         "version": "1.0.1"  # You can update this manually or read from a version file
@@ -412,3 +439,30 @@ def get_commander_info(commander_name: str):
             "found": False,
             "suggestions": commander_db.search_commanders(commander_name, limit=5)
         }
+
+@app.get("/card-names")
+def get_card_names(query: str = Query(..., description="Search query for card names"), limit: int = Query(10, description="Maximum number of results")):
+    """Get card name suggestions for lookahead functionality"""
+    if not card_names_cache.loaded:
+        return {
+            "loaded": False,
+            "suggestions": [],
+            "message": "Card names database still loading, please try again in a moment"
+        }
+    
+    # Limit the query length to prevent abuse
+    if len(query) > 50:
+        query = query[:50]
+    
+    # Limit the number of results
+    limit = min(limit, 20)
+    
+    suggestions = card_names_cache.search_card_names(query, limit)
+    
+    return {
+        "loaded": True,
+        "query": query,
+        "suggestions": suggestions,
+        "count": len(suggestions),
+        "is_exact_match": card_names_cache.is_exact_card_name(query)
+    }
