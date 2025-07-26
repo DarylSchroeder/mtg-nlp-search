@@ -207,8 +207,11 @@ def extract_filters_fallback(prompt: str) -> dict:
         print(f"🔍 DEBUG: No color identity found, checking individual colors")
         # Check for individual colors if no guild/commander context found
         individual_colors = []
+        import re
         for color_name, color_code in COLOR_MAP.items():
-            if color_name in prompt_lower:
+            # Use word boundaries to prevent substring matches
+            pattern = r'\b' + re.escape(color_name.lower()) + r'\b'
+            if re.search(pattern, prompt_lower):
                 print(f"🔍 DEBUG: Individual color found - '{color_name}' -> {color_code}")
                 individual_colors.append(color_code)
         
@@ -315,8 +318,11 @@ def extract_color_identity(prompt_lower: str) -> tuple:
     is_commander_context = False
     
     # Check guild names - use coloridentity for deck building context
+    import re
     for guild, colors in GUILD_COLORS.items():
-        if guild in prompt_lower:
+        # Use word boundaries to prevent substring matches
+        pattern = r'\b' + re.escape(guild.lower()) + r'\b'
+        if re.search(pattern, prompt_lower):
             print(f"🏛️ DEBUG: Guild match found - '{guild}' -> {colors}")
             debug_info["guild_matches"].append({"name": guild, "colors": colors})
             color_identity = colors
@@ -326,7 +332,9 @@ def extract_color_identity(prompt_lower: str) -> tuple:
     # Check shard names - use coloridentity for deck building context
     if not color_identity:
         for shard, colors in SHARD_COLORS.items():
-            if shard in prompt_lower:
+            # Use word boundaries to prevent substring matches
+            pattern = r'\b' + re.escape(shard.lower()) + r'\b'
+            if re.search(pattern, prompt_lower):
                 print(f"🔺 DEBUG: Shard match found - '{shard}' -> {colors}")
                 debug_info["shard_matches"].append({"name": shard, "colors": colors})
                 color_identity = colors
@@ -336,7 +344,9 @@ def extract_color_identity(prompt_lower: str) -> tuple:
     # Check wedge names - use coloridentity for deck building context
     if not color_identity:
         for wedge, colors in WEDGE_COLORS.items():
-            if wedge in prompt_lower:
+            # Use word boundaries to prevent substring matches
+            pattern = r'\b' + re.escape(wedge.lower()) + r'\b'
+            if re.search(pattern, prompt_lower):
                 print(f"🔶 DEBUG: Wedge match found - '{wedge}' -> {colors}")
                 debug_info["wedge_matches"].append({"name": wedge, "colors": colors})
                 color_identity = colors
@@ -370,8 +380,11 @@ def extract_color_identity(prompt_lower: str) -> tuple:
             
             # Also check direct commander name mentions
             if not color_identity:
+                import re
                 for commander_name in commander_db.commanders.keys():
-                    if commander_name in prompt_lower:
+                    # Use word boundaries to prevent substring matches
+                    pattern = r'\b' + re.escape(commander_name.lower()) + r'\b'
+                    if re.search(pattern, prompt_lower):
                         print(f"👑 DEBUG: Commander match found - '{commander_name}' -> {commander_db.commanders[commander_name]}")
                         debug_info["commander_matches"].append({
                             "name": commander_name, 
@@ -382,8 +395,11 @@ def extract_color_identity(prompt_lower: str) -> tuple:
                         break
         else:
             # Fallback to hardcoded commanders if database not loaded
+            import re
             for commander, colors in COMMANDERS.items():
-                if commander in prompt_lower:
+                # Use word boundaries to prevent substring matches
+                pattern = r'\b' + re.escape(commander.lower()) + r'\b'
+                if re.search(pattern, prompt_lower):
                     print(f"👑 DEBUG: Fallback commander match found - '{commander}' -> {colors}")
                     debug_info["fallback_commander_matches"].append({
                         "name": commander, 
